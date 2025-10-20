@@ -1,0 +1,1472 @@
+openapi: 3.0.3
+info:
+  title: FitnessHub API
+  description: |
+    Comprehensive fitness/gym management platform API with social networking features and AI-powered personal assistant capabilities.
+    
+    This API provides endpoints for:
+    - User management and authentication
+    - Workout and exercise tracking
+    - Social networking features
+    - AI-powered recommendations and chat
+    - Blockchain integration for NFT achievements
+    - Notification services
+    
+    ## Authentication
+    All endpoints require authentication via JWT tokens obtained from Supabase Auth.
+    
+    ## Rate Limiting
+    API requests are rate limited to 100 requests per 15-minute window per IP address.
+    
+    ## Error Handling
+    All errors follow a consistent format with appropriate HTTP status codes.
+  version: 1.0.0
+  contact:
+    name: FitnessHub Development Team
+    email: dev@fitnesshub.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.fitnesshub.com/v1
+    description: Production server
+  - url: https://staging-api.fitnesshub.com/v1
+    description: Staging server
+  - url: http://localhost:3000/v1
+    description: Development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health Check
+      description: Check the health status of the API Gateway and all microservices
+      tags:
+        - System
+      security: []
+      responses:
+        '200':
+          description: All services are healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: One or more services are unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+      examples:
+        healthy:
+          summary: All services healthy
+          value:
+            status: "healthy"
+            timestamp: "2024-01-15T10:30:00Z"
+            version: "1.0.0"
+            uptime: 3600
+            memory:
+              rss: 45678912
+              heapTotal: 20971520
+              heapUsed: 15728640
+              external: 1048576
+            services:
+              user-service:
+                status: "healthy"
+                responseTime: 45
+                lastCheck: "2024-01-15T10:30:00Z"
+              workout-service:
+                status: "healthy"
+                responseTime: 32
+                lastCheck: "2024-01-15T10:30:00Z"
+              social-service:
+                status: "healthy"
+                responseTime: 28
+                lastCheck: "2024-01-15T10:30:00Z"
+              ai-service:
+                status: "healthy"
+                responseTime: 156
+                lastCheck: "2024-01-15T10:30:00Z"
+              blockchain-service:
+                status: "healthy"
+                responseTime: 89
+                lastCheck: "2024-01-15T10:30:00Z"
+              notification-service:
+                status: "healthy"
+                responseTime: 23
+                lastCheck: "2024-01-15T10:30:00Z"
+
+  /users:
+    get:
+      summary: Get Users
+      description: Retrieve a paginated list of users
+      tags:
+        - Users
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Number of users per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: search
+          in: query
+          description: Search term for filtering users
+          required: false
+          schema:
+            type: string
+        - name: role
+          in: query
+          description: Filter users by role
+          required: false
+          schema:
+            type: string
+            enum: [user, trainer, admin]
+      responses:
+        '200':
+          description: List of users retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create User
+      description: Create a new user account
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/{userId}:
+    get:
+      summary: Get User by ID
+      description: Retrieve a specific user by their ID
+      tags:
+        - Users
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Unique identifier for the user
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Update User
+      description: Update an existing user
+      tags:
+        - Users
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Unique identifier for the user
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete User
+      description: Delete a user account
+      tags:
+        - Users
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Unique identifier for the user
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: User deleted successfully
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /workouts:
+    get:
+      summary: Get Workouts
+      description: Retrieve a paginated list of workouts
+      tags:
+        - Workouts
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Number of workouts per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: userId
+          in: query
+          description: Filter workouts by user ID
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: type
+          in: query
+          description: Filter workouts by type
+          required: false
+          schema:
+            type: string
+            enum: [strength, cardio, flexibility, sports, other]
+        - name: difficulty
+          in: query
+          description: Filter workouts by difficulty level
+          required: false
+          schema:
+            type: string
+            enum: [beginner, intermediate, advanced]
+      responses:
+        '200':
+          description: List of workouts retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutListResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create Workout
+      description: Create a new workout
+      tags:
+        - Workouts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkoutRequest'
+      responses:
+        '201':
+          description: Workout created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /workouts/{workoutId}:
+    get:
+      summary: Get Workout by ID
+      description: Retrieve a specific workout by its ID
+      tags:
+        - Workouts
+      parameters:
+        - name: workoutId
+          in: path
+          required: true
+          description: Unique identifier for the workout
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Workout retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutResponse'
+        '404':
+          description: Workout not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /social/feed:
+    get:
+      summary: Get Social Feed
+      description: Retrieve the social feed with posts from followed users
+      tags:
+        - Social
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Number of posts per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        '200':
+          description: Social feed retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SocialFeedResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /ai/chat:
+    post:
+      summary: Send AI Chat Message
+      description: Send a message to the AI assistant and receive a response
+      tags:
+        - AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AIChatRequest'
+      responses:
+        '200':
+          description: AI response generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIChatResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /ai/recommendations:
+    get:
+      summary: Get AI Recommendations
+      description: Get personalized recommendations from the AI system
+      tags:
+        - AI
+      parameters:
+        - name: type
+          in: query
+          description: Type of recommendations to retrieve
+          required: true
+          schema:
+            type: string
+            enum: [workouts, nutrition, social, general]
+        - name: limit
+          in: query
+          description: Number of recommendations to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 10
+      responses:
+        '200':
+          description: Recommendations retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /blockchain/nfts:
+    get:
+      summary: Get User NFTs
+      description: Retrieve NFTs owned by the authenticated user
+      tags:
+        - Blockchain
+      responses:
+        '200':
+          description: NFTs retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NFTListResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /notifications:
+    get:
+      summary: Get Notifications
+      description: Retrieve notifications for the authenticated user
+      tags:
+        - Notifications
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Number of notifications per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: unread
+          in: query
+          description: Filter for unread notifications only
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Notifications retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationListResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from Supabase Auth
+
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+        - version
+        - uptime
+        - memory
+        - services
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+          description: Overall health status
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp of the health check
+        version:
+          type: string
+          description: API version
+        uptime:
+          type: number
+          description: Uptime in seconds
+        memory:
+          type: object
+          properties:
+            rss:
+              type: number
+              description: Resident Set Size
+            heapTotal:
+              type: number
+              description: Total heap size
+            heapUsed:
+              type: number
+              description: Used heap size
+            external:
+              type: number
+              description: External memory usage
+        services:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [healthy, unhealthy]
+              responseTime:
+                type: number
+                description: Response time in milliseconds
+              lastCheck:
+                type: string
+                format: date-time
+              error:
+                type: string
+                description: Error message if unhealthy
+
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - firstName
+        - lastName
+        - role
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique user identifier
+        email:
+          type: string
+          format: email
+          description: User email address
+        firstName:
+          type: string
+          description: User's first name
+        lastName:
+          type: string
+          description: User's last name
+        role:
+          type: string
+          enum: [user, trainer, admin]
+          description: User role
+        avatar:
+          type: string
+          format: uri
+          description: URL to user's avatar image
+        bio:
+          type: string
+          description: User biography
+        location:
+          type: string
+          description: User location
+        dateOfBirth:
+          type: string
+          format: date
+          description: User's date of birth
+        gender:
+          type: string
+          enum: [male, female, other, prefer_not_to_say]
+          description: User's gender
+        fitnessGoals:
+          type: array
+          items:
+            type: string
+            enum: [weight_loss, muscle_gain, endurance, flexibility, general_fitness]
+          description: User's fitness goals
+        activityLevel:
+          type: string
+          enum: [sedentary, lightly_active, moderately_active, very_active, extremely_active]
+          description: User's activity level
+        isActive:
+          type: boolean
+          description: Whether the user account is active
+        lastLoginAt:
+          type: string
+          format: date-time
+          description: Last login timestamp
+        createdAt:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    CreateUserRequest:
+      type: object
+      required:
+        - email
+        - firstName
+        - lastName
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email address
+        firstName:
+          type: string
+          description: User's first name
+        lastName:
+          type: string
+          description: User's last name
+        password:
+          type: string
+          minLength: 8
+          description: User password
+        role:
+          type: string
+          enum: [user, trainer]
+          default: user
+          description: User role
+        bio:
+          type: string
+          description: User biography
+        location:
+          type: string
+          description: User location
+        dateOfBirth:
+          type: string
+          format: date
+          description: User's date of birth
+        gender:
+          type: string
+          enum: [male, female, other, prefer_not_to_say]
+          description: User's gender
+        fitnessGoals:
+          type: array
+          items:
+            type: string
+            enum: [weight_loss, muscle_gain, endurance, flexibility, general_fitness]
+          description: User's fitness goals
+        activityLevel:
+          type: string
+          enum: [sedentary, lightly_active, moderately_active, very_active, extremely_active]
+          description: User's activity level
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          description: User's first name
+        lastName:
+          type: string
+          description: User's last name
+        bio:
+          type: string
+          description: User biography
+        location:
+          type: string
+          description: User location
+        dateOfBirth:
+          type: string
+          format: date
+          description: User's date of birth
+        gender:
+          type: string
+          enum: [male, female, other, prefer_not_to_say]
+          description: User's gender
+        fitnessGoals:
+          type: array
+          items:
+            type: string
+            enum: [weight_loss, muscle_gain, endurance, flexibility, general_fitness]
+          description: User's fitness goals
+        activityLevel:
+          type: string
+          enum: [sedentary, lightly_active, moderately_active, very_active, extremely_active]
+          description: User's activity level
+
+    UserResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the request was successful
+        data:
+          $ref: '#/components/schemas/User'
+        message:
+          type: string
+          description: Optional success message
+
+    UserListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - pagination
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the request was successful
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        message:
+          type: string
+          description: Optional success message
+
+    Workout:
+      type: object
+      required:
+        - id
+        - userId
+        - name
+        - type
+        - difficulty
+        - duration
+        - exercises
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique workout identifier
+        userId:
+          type: string
+          format: uuid
+          description: ID of the user who created the workout
+        name:
+          type: string
+          description: Workout name
+        description:
+          type: string
+          description: Workout description
+        type:
+          type: string
+          enum: [strength, cardio, flexibility, sports, other]
+          description: Type of workout
+        difficulty:
+          type: string
+          enum: [beginner, intermediate, advanced]
+          description: Difficulty level
+        duration:
+          type: integer
+          description: Workout duration in minutes
+        caloriesBurned:
+          type: integer
+          description: Estimated calories burned
+        exercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/Exercise'
+          description: List of exercises in the workout
+        isTemplate:
+          type: boolean
+          description: Whether this is a reusable template
+        isPublic:
+          type: boolean
+          description: Whether the workout is public
+        tags:
+          type: array
+          items:
+            type: string
+          description: Workout tags
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    Exercise:
+      type: object
+      required:
+        - id
+        - name
+        - sets
+        - reps
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique exercise identifier
+        name:
+          type: string
+          description: Exercise name
+        description:
+          type: string
+          description: Exercise description
+        sets:
+          type: integer
+          minimum: 1
+          description: Number of sets
+        reps:
+          type: integer
+          minimum: 1
+          description: Number of repetitions per set
+        weight:
+          type: number
+          description: Weight in pounds or kilograms
+        duration:
+          type: integer
+          description: Duration in seconds (for time-based exercises)
+        restTime:
+          type: integer
+          description: Rest time between sets in seconds
+        notes:
+          type: string
+          description: Additional notes for the exercise
+
+    CreateWorkoutRequest:
+      type: object
+      required:
+        - name
+        - type
+        - difficulty
+        - duration
+        - exercises
+      properties:
+        name:
+          type: string
+          description: Workout name
+        description:
+          type: string
+          description: Workout description
+        type:
+          type: string
+          enum: [strength, cardio, flexibility, sports, other]
+          description: Type of workout
+        difficulty:
+          type: string
+          enum: [beginner, intermediate, advanced]
+          description: Difficulty level
+        duration:
+          type: integer
+          description: Workout duration in minutes
+        exercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/Exercise'
+          description: List of exercises in the workout
+        isTemplate:
+          type: boolean
+          default: false
+          description: Whether this is a reusable template
+        isPublic:
+          type: boolean
+          default: false
+          description: Whether the workout is public
+        tags:
+          type: array
+          items:
+            type: string
+          description: Workout tags
+
+    WorkoutResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the request was successful
+        data:
+          $ref: '#/components/schemas/Workout'
+        message:
+          type: string
+          description: Optional success message
+
+    WorkoutListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - pagination
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the request was successful
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Workout'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        message:
+          type: string
+          description: Optional success message
+
+    SocialPost:
+      type: object
+      required:
+        - id
+        - userId
+        - content
+        - type
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique post identifier
+        userId:
+          type: string
+          format: uuid
+          description: ID of the user who created the post
+        content:
+          type: string
+          description: Post content
+        type:
+          type: string
+          enum: [text, image, video, workout, achievement]
+          description: Type of post
+        media:
+          type: array
+          items:
+            type: string
+            format: uri
+          description: URLs to attached media files
+        workoutId:
+          type: string
+          format: uuid
+          description: Associated workout ID (for workout posts)
+        likes:
+          type: integer
+          description: Number of likes
+        comments:
+          type: integer
+          description: Number of comments
+        shares:
+          type: integer
+          description: Number of shares
+        isLiked:
+          type: boolean
+          description: Whether the current user has liked this post
+        user:
+          $ref: '#/components/schemas/User'
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    SocialFeedResponse:
+      type: object
+      required:
+        - success
+        - data
+        - pagination
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the request was successful
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SocialPost'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        message:
+          type: string
+          description: Optional success message
+
+    AIChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: User message to the AI assistant
+        context:
+          type: object
+          description: Additional context for the AI response
+          properties:
+            userId:
+              type: string
+              format: uuid
+              description: User ID for personalization
+            workoutHistory:
+              type: array
+              items:
+                type: string
+              description: Recent workout history
+            preferences:
+              type: object
+              description: User preferences
+
+    AIChatResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the request was successful
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+              description: AI response message
+            suggestions:
+              type: array
+              items:
+                type: string
+              description: Suggested follow-up questions
+            actions:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum: [workout, nutrition, social, general]
+                  title:
+                    type: string
+                  description:
+                    type: string
+                  data:
+                    type: object
+              description: Suggested actions
+        message:
+          type: string
+          description: Optional success message
+
+    Recommendation:
+      type: object
+      required:
+        - id
+        - type
+        - title
+        - description
+        - confidence
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique recommendation identifier
+        type:
+          type: string
+          enum: [workout, nutrition, social, general]
+          description: Type of recommendation
+        title:
+          type: string
+          description: Recommendation title
+        description:
+          type: string
+          description: Recommendation description
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Confidence score (0-1)
+        data:
+          type: object
+          description: Additional recommendation data
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+
+    RecommendationsResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the request was successful
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recommendation'
+        message:
+          type: string
+          description: Optional success message
+
+    NFT:
+      type: object
+      required:
+        - id
+        - tokenId
+        - contractAddress
+        - name
+        - description
+        - image
+        - rarity
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique NFT identifier
+        tokenId:
+          type: string
+          description: Blockchain token ID
+        contractAddress:
+          type: string
+          description: Smart contract address
+        name:
+          type: string
+          description: NFT name
+        description:
+          type: string
+          description: NFT description
+        image:
+          type: string
+          format: uri
+          description: NFT image URL
+        rarity:
+          type: string
+          enum: [common, uncommon, rare, epic, legendary]
+          description: NFT rarity level
+        attributes:
+          type: array
+          items:
+            type: object
+            properties:
+              trait_type:
+                type: string
+              value:
+                type: string
+          description: NFT attributes
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+
+    NFTListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the request was successful
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/NFT'
+        message:
+          type: string
+          description: Optional success message
+
+    Notification:
+      type: object
+      required:
+        - id
+        - userId
+        - type
+        - title
+        - message
+        - isRead
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique notification identifier
+        userId:
+          type: string
+          format: uuid
+          description: ID of the user who receives the notification
+        type:
+          type: string
+          enum: [workout, social, achievement, system, reminder]
+          description: Type of notification
+        title:
+          type: string
+          description: Notification title
+        message:
+          type: string
+          description: Notification message
+        data:
+          type: object
+          description: Additional notification data
+        isRead:
+          type: boolean
+          description: Whether the notification has been read
+        readAt:
+          type: string
+          format: date-time
+          description: Timestamp when notification was read
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+
+    NotificationListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - pagination
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the request was successful
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        message:
+          type: string
+          description: Optional success message
+
+    Pagination:
+      type: object
+      required:
+        - page
+        - limit
+        - total
+        - totalPages
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          description: Current page number
+        limit:
+          type: integer
+          minimum: 1
+          description: Number of items per page
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of items
+        totalPages:
+          type: integer
+          minimum: 0
+          description: Total number of pages
+        hasNext:
+          type: boolean
+          description: Whether there is a next page
+        hasPrev:
+          type: boolean
+          description: Whether there is a previous page
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+        - message
+        - timestamp
+      properties:
+        success:
+          type: boolean
+          default: false
+          description: Indicates if the request was successful
+        error:
+          type: string
+          description: Error type
+        message:
+          type: string
+          description: Error message
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp
+        details:
+          type: object
+          description: Additional error details
+        code:
+          type: string
+          description: Error code
+
+tags:
+  - name: System
+    description: System health and monitoring endpoints
+  - name: Users
+    description: User management and profile operations
+  - name: Workouts
+    description: Workout and exercise management
+  - name: Social
+    description: Social networking features
+  - name: AI
+    description: AI-powered features and recommendations
+  - name: Blockchain
+    description: Blockchain and NFT integration
+  - name: Notifications
+    description: Notification management
+

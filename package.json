@@ -1,0 +1,46 @@
+{
+  "name": "pti-gympal-doc",
+  "version": "1.0.0",
+  "description": "Documentación completa del proyecto GymPal - Plataforma social de fitness con inteligencia artificial",
+  "main": "index.js",
+  "scripts": {
+    "dev": "python -m http.server 8000",
+    "serve": "python -m http.server 8000",
+    "build": "echo 'Documentation is static Markdown files'",
+    "test": "echo 'No tests for documentation'",
+    "lint": "markdownlint docs/**/*.md",
+    "lint:fix": "markdownlint --fix docs/**/*.md",
+    "validate": "markdownlint docs/**/*.md && echo 'All markdown files are valid'",
+    "deploy": "echo 'Deploy to GitHub Pages via GitHub Actions'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/username/PTI-GymPalDoc.git"
+  },
+  "keywords": [
+    "gympal",
+    "fitness",
+    "social",
+    "ai",
+    "documentation",
+    "nextjs",
+    "hono",
+    "supabase",
+    "typescript",
+    "kubernetes",
+    "devops"
+  ],
+  "author": "Equipo GymPal FIB-UPC",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/username/PTI-GymPalDoc/issues"
+  },
+  "homepage": "https://username.github.io/PTI-GymPalDoc",
+  "devDependencies": {
+    "markdownlint-cli": "^0.37.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

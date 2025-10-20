@@ -1,0 +1,75 @@
+{
+  "title": "GymPal - Technical Documentation",
+  "description": "Complete documentation of the GymPal project - Social fitness platform with integrated artificial intelligence",
+  "version": "1.0.0",
+  "author": "GymPal Team FIB-UPC",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/username/PTI-GymPalDoc.git"
+  },
+  "homepage": "https://username.github.io/PTI-GymPalDoc",
+  "keywords": [
+    "gympal",
+    "fitness",
+    "social",
+    "ai",
+    "documentation",
+    "nextjs",
+    "hono",
+    "supabase",
+    "typescript",
+    "kubernetes",
+    "devops",
+    "monitoring",
+    "prometheus",
+    "grafana"
+  ],
+  "structure": {
+    "main_docs": [
+      "GYMPAL.md",
+      "gympal.html",
+      "README.md"
+    ],
+    "sections": [
+      "architecture",
+      "api",
+      "database",
+      "devops",
+      "testing",
+      "security",
+      "ai",
+      "team",
+      "configuration",
+      "quick-start",
+      "diagrams"
+    ]
+  },
+  "features": {
+    "mermaid_diagrams": true,
+    "monitoring_config": true,
+    "production_alerts": true,
+    "ci_cd_pipelines": true,
+    "api_documentation": true,
+    "database_schema": true,
+    "testing_strategy": true,
+    "security_compliance": true,
+    "ai_integration": true,
+    "team_organization": true
+  },
+  "technologies": {
+    "frontend": ["Next.js 14", "TypeScript", "Tailwind CSS", "Zustand"],
+    "backend": ["Hono", "TypeScript", "Supabase"],
+    "database": ["PostgreSQL", "Row Level Security"],
+    "ai": ["Dify AI Platform", "n8n Workflows"],
+    "infrastructure": ["Docker", "Kubernetes", "ArgoCD"],
+    "monitoring": ["Prometheus", "Grafana", "Loki", "AlertManager"],
+    "testing": ["Vitest", "Playwright", "Artillery"]
+  },
+  "deployment": {
+    "platform": "GitHub Pages",
+    "workflow": ".github/workflows/docs.yml",
+    "branch": "main",
+    "output": "docs/"
+  }
+}
