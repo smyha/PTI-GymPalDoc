@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>GymPal - Technical Documentation</title>
+  
+  <!-- Docsify CSS -->
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify-sidebar-collapse/dist/docsify-sidebar-collapse.min.css">
+  
+  <style>
+    /* Custom styles */
+    :root {
+      --theme-color: #42b983;
+      --bg-color: #ffffff;
+      --text-color: #2c3e50;
+      --sidebar-bg: #f9f9f9;
+      --code-bg: #f6f8fa;
+      --mermaid-bg: #f9f9f9;
+      --border-color: #e1e4e8;
+    }
+    
+    /* Dark mode variables */
+    [data-theme="dark"] {
+      --bg-color: #1e1e1e;
+      --text-color: #d4d4d4;
+      --sidebar-bg: #252526;
+      --code-bg: #1e1e1e;
+      --mermaid-bg: #252526;
+      --border-color: #3e3e42;
+    }
+    
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    
+    .sidebar {
+      background-color: var(--sidebar-bg) !important;
+      transition: background-color 0.3s ease;
+    }
+    
+    .sidebar ul li a {
+      color: var(--text-color) !important;
+    }
+    
+    .markdown-section {
+      max-width: 900px;
+      color: var(--text-color);
+    }
+    
+    .app-name-link {
+      font-weight: bold;
+      font-size: 1.3em;
+      color: var(--text-color) !important;
+    }
+    
+    /* Theme toggle button */
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      background: var(--bg-color);
+      border: 2px solid var(--border-color);
+      border-radius: 50%;
+      width: 45px;
+      height: 45px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      transition: all 0.3s ease;
+      font-size: 20px;
+    }
+    
+    .theme-toggle:hover {
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+    
+    [data-theme="dark"] .theme-toggle {
+      box-shadow: 0 2px 8px rgba(255,255,255,0.1);
+    }
+    
+    /* Improve Mermaid diagrams visualization */
+    .markdown-section pre {
+      background: var(--code-bg) !important;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+    
+    .markdown-section code {
+      background: var(--code-bg) !important;
+      color: var(--text-color) !important;
+    }
+    
+    /* Code block text colors */
+    .markdown-section pre code {
+      color: #333 !important;
+    }
+    
+    [data-theme="dark"] .markdown-section pre code {
+      color: #ffffff !important;
+    }
+    
+    [data-theme="dark"] .markdown-section code:not(pre code) {
+      color: #d4d4d4 !important;
+      background: #2d2d2d !important;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+    
+    /* Mermaid diagram styles */
+    .mermaid {
+      text-align: center;
+      margin: 20px 0;
+      padding: 20px;
+      background: var(--mermaid-bg);
+      border-radius: 6px;
+      overflow-x: auto;
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+    }
+    
+    .mermaid:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .mermaid::after {
+      content: '🔍 Click to view larger';
+      position: absolute;
+      top: 5px;
+      right: 10px;
+      font-size: 12px;
+      opacity: 0.6;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    
+    .mermaid:hover::after {
+      opacity: 1;
+    }
+    
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    
+    /* Modal for fullscreen Mermaid diagram */
+    .mermaid-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 10000;
+      cursor: grab;
+    }
+    
+    .mermaid-modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .mermaid-modal:active {
+      cursor: grabbing;
+    }
+    
+    .mermaid-modal-content {
+      position: relative;
+      max-width: 95vw;
+      max-height: 95vh;
+      background: var(--mermaid-bg);
+      border-radius: 8px;
+      padding: 20px;
+      overflow: auto;
+      transform-origin: center;
+      transition: transform 0.3s ease;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    
+    .mermaid-modal-content svg {
+      display: block;
+      max-width: none;
+      width: 100%;
+      height: auto;
+    }
+    
+    /* Modal controls */
+    .mermaid-modal-controls {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 10px;
+      z-index: 10001;
+    }
+    
+    .mermaid-modal-btn {
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    
+    .mermaid-modal-btn:hover {
+      background: rgba(255, 255, 255, 1);
+      transform: scale(1.1);
+    }
+    
+    .mermaid-modal-btn:active {
+      transform: scale(0.95);
+    }
+    
+    [data-theme="dark"] .mermaid-modal-btn {
+      background: rgba(30, 30, 30, 0.9);
+      color: var(--text-color);
+    }
+    
+    [data-theme="dark"] .mermaid-modal-btn:hover {
+      background: rgba(30, 30, 30, 1);
+    }
+    
+    /* Zoom controls */
+    .mermaid-zoom-controls {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 10001;
+    }
+    
+    .mermaid-zoom-btn {
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      border-radius: 8px;
+      width: 45px;
+      height: 45px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    
+    .mermaid-zoom-btn:hover {
+      background: rgba(255, 255, 255, 1);
+      transform: scale(1.1);
+    }
+    
+    [data-theme="dark"] .mermaid-zoom-btn {
+      background: rgba(30, 30, 30, 0.9);
+      color: var(--text-color);
+    }
+    
+    .mermaid-zoom-info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      z-index: 10001;
+      pointer-events: none;
+    }
+    
+    /* Dark mode specific styles */
+    [data-theme="dark"] .markdown-section h1,
+    [data-theme="dark"] .markdown-section h2,
+    [data-theme="dark"] .markdown-section h3,
+    [data-theme="dark"] .markdown-section h4,
+    [data-theme="dark"] .markdown-section h5,
+    [data-theme="dark"] .markdown-section h6 {
+      color: var(--text-color);
+    }
+    
+    [data-theme="dark"] .markdown-section a {
+      color: #4fc3f7;
+    }
+    
+    [data-theme="dark"] .markdown-section a:hover {
+      color: #81d4fa;
+    }
+    
+    [data-theme="dark"] .markdown-section blockquote {
+      border-left-color: #666;
+      color: #ccc;
+    }
+    
+    [data-theme="dark"] .markdown-section table {
+      border-color: var(--border-color);
+    }
+    
+    [data-theme="dark"] .markdown-section table th,
+    [data-theme="dark"] .markdown-section table td {
+      border-color: var(--border-color);
+    }
+  </style>
+</head>
+<body>
+  <!-- Theme toggle button -->
+  <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+    <span id="theme-icon">🌙</span>
+  </button>
+  
+  <div id="app">Loading documentation...</div>
+  
+  <script>
+    // Theme management
+    (function() {
+      const getThemePreference = function() {
+        // Check localStorage first
+        const stored = localStorage.getItem('theme');
+        if (stored) {
+          return stored;
+        }
+        // Fall back to system preference
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          return 'dark';
+        }
+        return 'light';
+      };
+      
+      const applyTheme = function(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+        
+        // Update icon
+        const icon = document.getElementById('theme-icon');
+        if (icon) {
+          icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+        
+        // Update Mermaid theme if initialized
+        if (window.mermaid) {
+          mermaid.initialize({
+            startOnLoad: false,
+            theme: theme === 'dark' ? 'dark' : 'default',
+            securityLevel: 'loose',
+            flowchart: {
+              useMaxWidth: true,
+              htmlLabels: true,
+              curve: 'basis'
+            },
+            themeVariables: theme === 'dark' ? {
+              primaryColor: '#42b983',
+              primaryTextColor: '#fff',
+              primaryBorderColor: '#42b983',
+              lineColor: '#42b983',
+              secondaryColor: '#2d2d2d',
+              tertiaryColor: '#1e1e1e',
+              background: '#1e1e1e',
+              mainBkgColor: '#1e1e1e',
+              secondBkgColor: '#252526',
+              tertiaryColor: '#2d2d2d'
+            } : {
+              primaryColor: '#42b983',
+              primaryTextColor: '#fff',
+              primaryBorderColor: '#42b983',
+              lineColor: '#42b983',
+              secondaryColor: '#f9f9f9',
+              tertiaryColor: '#fff'
+            }
+          });
+        }
+      };
+      
+      // Initialize theme on page load
+      const initialTheme = getThemePreference();
+      applyTheme(initialTheme);
+      
+      // Toggle theme on button click
+      const toggleButton = document.getElementById('theme-toggle');
+      if (toggleButton) {
+        toggleButton.addEventListener('click', function() {
+          const currentTheme = document.documentElement.getAttribute('data-theme');
+          const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+          applyTheme(newTheme);
+        });
+      }
+      
+      // Listen for system theme changes
+      if (window.matchMedia) {
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        mediaQuery.addEventListener('change', function(e) {
+          // Only auto-switch if user hasn't manually set a preference
+          if (!localStorage.getItem('theme')) {
+            applyTheme(e.matches ? 'dark' : 'light');
+          }
+        });
+      }
+    })();
+    
+    let svgCounter = 0;
+    
+    window.$docsify = {
+      name: 'GymPal - Technical Documentation',
+      repo: 'https://github.com/username/PTI-GymPalDoc',
+      loadSidebar: true,
+      subMaxLevel: 3,
+      alias: {
+        '/.*/_sidebar.md': '/_sidebar.md'
+      },
+      coverpage: false,
+      notFoundPage: true,
+      homepage: 'docs/00-index.md',
+      routerMode: 'history',
+      executeScript: true,
+      mergeNavbar: true,
+      formatUpdated: '{YYYY}-{MM}-{DD} {HH}:{mm}',
+      
+      // Custom Markdown renderer for Mermaid
+      markdown: {
+        renderer: {
+          code: function(code, lang) {
+            if (lang === 'mermaid') {
+              const svgName = 'mermaid-svg-' + (svgCounter++);
+              const containerId = svgName + '-container';
+              
+              // Escape HTML for data attribute
+              const escapedCode = code
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+              
+              // Return placeholder that will be replaced with rendered SVG
+              return '<div class="mermaid-container" id="' + containerId + '" data-mermaid-code="' + 
+                     escapedCode + '"></div>';
+            }
+            // Default code block rendering
+            return this.origin.code.apply(this, arguments);
+          }
+        }
+      },
+      
+      // Docsify plugins
+      plugins: [
+        function(hook, vm) {
+          hook.doneEach(function() {
+            // Process Mermaid containers after content is rendered
+            setTimeout(function() {
+              const mermaidContainers = document.querySelectorAll('.mermaid-container[data-mermaid-code]');
+              
+              if (mermaidContainers.length > 0 && window.mermaid) {
+                mermaidContainers.forEach(function(container) {
+                  const code = container.getAttribute('data-mermaid-code');
+                  const containerId = container.id;
+                  
+                  if (code && containerId) {
+                    try {
+                      // Unescape HTML from data attribute
+                      const unescapedCode = code
+                        .replace(/&amp;/g, '&')
+                        .replace(/&lt;/g, '<')
+                        .replace(/&gt;/g, '>')
+                        .replace(/&quot;/g, '"')
+                        .replace(/&#39;/g, "'");
+                      
+                      // Use mermaid.render for async rendering (Mermaid 8.4+)
+                      if (typeof mermaid.render === 'function') {
+                        const diagramId = containerId.replace('-container', '');
+                        mermaid.render(diagramId, unescapedCode)
+                          .then(function(result) {
+                            container.innerHTML = result.svg;
+                            container.className = 'mermaid';
+                            container.removeAttribute('data-mermaid-code');
+                            
+                            // Add click handler for modal view
+                            addMermaidModalSupport(container);
+                          })
+                          .catch(function(error) {
+                            console.error('Mermaid rendering error:', error);
+                            container.innerHTML = '<pre><code class="language-mermaid">' + unescapedCode + '</code></pre>';
+                          });
+                      } else if (typeof mermaid.init === 'function') {
+                        // Fallback for older Mermaid versions
+                        const mermaidDiv = document.createElement('div');
+                        mermaidDiv.className = 'mermaid';
+                        mermaidDiv.textContent = unescapedCode;
+                        container.parentNode.replaceChild(mermaidDiv, container);
+                        mermaid.init(undefined, [mermaidDiv]).then(function() {
+                          addMermaidModalSupport(mermaidDiv);
+                        });
+                      }
+                    } catch (e) {
+                      console.error('Mermaid error:', e);
+                      const unescapedCode = code
+                        .replace(/&amp;/g, '&')
+                        .replace(/&lt;/g, '<')
+                        .replace(/&gt;/g, '>')
+                        .replace(/&quot;/g, '"')
+                        .replace(/&#39;/g, "'");
+                      container.innerHTML = '<pre><code class="language-mermaid">' + unescapedCode + '</code></pre>';
+                    }
+                  }
+                });
+              } else if (mermaidContainers.length > 0) {
+                // Mermaid not loaded yet, wait and retry
+                console.warn('Mermaid library not loaded yet');
+              }
+            }, 200);
+          });
+        }
+      ],
+      
+      // Search configuration
+      search: {
+        maxAge: 86400000,
+        paths: 'auto',
+        placeholder: 'Search documentation...',
+        noData: 'No results found',
+        depth: 6
+      },
+      
+      // Code configuration
+      code: {
+        copy: true,
+        maxShownLines: 100
+      }
+    };
+  </script>
+  
+  <!-- Docsify JS -->
+  <script src="//cdn.jsdelivr.net/npm/docsify@4/lib/docsify.min.js"></script>
+  
+  <!-- Docsify plugins -->
+  <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/emoji.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/copy-code.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify-sidebar-collapse/dist/docsify-sidebar-collapse.min.js"></script>
+  
+  <!-- Mermaid for diagrams - Load before Docsify -->
+  <script src="//cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    // Initialize Mermaid with theme based on current preference
+    const initialMermaidTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default';
+    mermaid.initialize({ 
+      startOnLoad: false,
+      theme: initialMermaidTheme,
+      securityLevel: 'loose',
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'basis'
+      },
+      themeVariables: initialMermaidTheme === 'dark' ? {
+        primaryColor: '#42b983',
+        primaryTextColor: '#fff',
+        primaryBorderColor: '#42b983',
+        lineColor: '#42b983',
+        secondaryColor: '#2d2d2d',
+        tertiaryColor: '#1e1e1e',
+        background: '#1e1e1e',
+        mainBkgColor: '#1e1e1e',
+        secondBkgColor: '#252526'
+      } : {
+        primaryColor: '#42b983',
+        primaryTextColor: '#fff',
+        primaryBorderColor: '#42b983',
+        lineColor: '#42b983',
+        secondaryColor: '#f9f9f9',
+        tertiaryColor: '#fff'
+      }
+    });
+  </script>
+  
+  <!-- Plugin to execute scripts in Markdown (for Mermaid) -->
+  <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/execute-script.min.js"></script>
+  
+  <!-- Mermaid Modal Functionality -->
+  <script>
+    // Ensure modal is only created once
+    let mermaidModalCreated = false;
+    
+    function ensureModalExists() {
+      if (mermaidModalCreated) return;
+      
+      const existingModal = document.getElementById('mermaid-modal');
+      if (existingModal) {
+        mermaidModalCreated = true;
+        return;
+      }
+      
+      // Create modal structure (only once)
+      const modal = document.createElement('div');
+      modal.className = 'mermaid-modal';
+      modal.setAttribute('id', 'mermaid-modal');
+      
+      const modalContent = document.createElement('div');
+      modalContent.className = 'mermaid-modal-content';
+      modalContent.setAttribute('id', 'mermaid-modal-content');
+      
+      // Controls
+      const controls = document.createElement('div');
+      controls.className = 'mermaid-modal-controls';
+      
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'mermaid-modal-btn';
+      closeBtn.innerHTML = '✕';
+      closeBtn.setAttribute('aria-label', 'Close');
+      closeBtn.onclick = function(e) {
+        e.stopPropagation();
+        closeMermaidModal();
+      };
+      
+      controls.appendChild(closeBtn);
+      
+      // Zoom controls
+      const zoomControls = document.createElement('div');
+      zoomControls.className = 'mermaid-zoom-controls';
+      
+      const zoomInBtn = document.createElement('button');
+      zoomInBtn.className = 'mermaid-zoom-btn';
+      zoomInBtn.innerHTML = '+';
+      zoomInBtn.setAttribute('aria-label', 'Zoom in');
+      zoomInBtn.onclick = function(e) {
+        e.stopPropagation();
+        zoomMermaidDiagram(1.2);
+      };
+      
+      const zoomOutBtn = document.createElement('button');
+      zoomOutBtn.className = 'mermaid-zoom-btn';
+      zoomOutBtn.innerHTML = '−';
+      zoomOutBtn.setAttribute('aria-label', 'Zoom out');
+      zoomOutBtn.onclick = function(e) {
+        e.stopPropagation();
+        zoomMermaidDiagram(0.8);
+      };
+      
+      const resetZoomBtn = document.createElement('button');
+      resetZoomBtn.className = 'mermaid-zoom-btn';
+      resetZoomBtn.innerHTML = '⌂';
+      resetZoomBtn.setAttribute('aria-label', 'Reset zoom');
+      resetZoomBtn.onclick = function(e) {
+        e.stopPropagation();
+        resetMermaidZoom();
+      };
+      
+      zoomControls.appendChild(zoomInBtn);
+      zoomControls.appendChild(zoomOutBtn);
+      zoomControls.appendChild(resetZoomBtn);
+      
+      // Zoom info
+      const zoomInfo = document.createElement('div');
+      zoomInfo.className = 'mermaid-zoom-info';
+      zoomInfo.id = 'mermaid-zoom-info';
+      zoomInfo.textContent = '100%';
+      
+      modalContent.appendChild(controls);
+      modalContent.appendChild(zoomControls);
+      modalContent.appendChild(zoomInfo);
+      modal.appendChild(modalContent);
+      
+      document.body.appendChild(modal);
+      mermaidModalCreated = true;
+      
+      // Close on background click
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+          closeMermaidModal();
+        }
+      });
+      
+      // Pan functionality with mouse drag
+      let isDragging = false;
+      let startX, startY, scrollLeft, scrollTop;
+      
+      modalContent.addEventListener('mousedown', function(e) {
+        if (e.target === modalContent || e.target.tagName === 'svg' || e.target.closest('svg')) {
+          isDragging = true;
+          startX = e.pageX - modalContent.offsetLeft;
+          startY = e.pageY - modalContent.offsetTop;
+          scrollLeft = modalContent.scrollLeft;
+          scrollTop = modalContent.scrollTop;
+          modal.style.cursor = 'grabbing';
+        }
+      });
+      
+      document.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        e.preventDefault();
+        const x = e.pageX - modalContent.offsetLeft;
+        const y = e.pageY - modalContent.offsetTop;
+        const walkX = (x - startX) * 2;
+        const walkY = (y - startY) * 2;
+        modalContent.scrollLeft = scrollLeft - walkX;
+        modalContent.scrollTop = scrollTop - walkY;
+      });
+      
+      document.addEventListener('mouseup', function() {
+        isDragging = false;
+        if (modal) {
+          modal.style.cursor = 'grab';
+        }
+      });
+      
+      // Keyboard shortcuts
+      document.addEventListener('keydown', function(e) {
+        const modalElement = document.getElementById('mermaid-modal');
+        if (modalElement && modalElement.classList.contains('active')) {
+          if (e.key === 'Escape') {
+            closeMermaidModal();
+          } else if ((e.key === '+' || e.key === '=') && !e.shiftKey) {
+            e.preventDefault();
+            zoomMermaidDiagram(1.2);
+          } else if (e.key === '-') {
+            e.preventDefault();
+            zoomMermaidDiagram(0.8);
+          } else if (e.key === '0') {
+            e.preventDefault();
+            resetMermaidZoom();
+          }
+        }
+      });
+    }
+    
+    function addMermaidModalSupport(mermaidElement) {
+      if (!mermaidElement || mermaidElement.classList.contains('mermaid-modal-enabled')) {
+        return;
+      }
+      
+      mermaidElement.classList.add('mermaid-modal-enabled');
+      
+      // Ensure modal exists
+      ensureModalExists();
+      
+      // Click handler to open modal
+      mermaidElement.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openMermaidModal(mermaidElement);
+      });
+    }
+    
+    function openMermaidModal(mermaidElement) {
+      ensureModalExists();
+      
+      const modal = document.getElementById('mermaid-modal');
+      const modalContent = document.getElementById('mermaid-modal-content');
+      
+      if (!modal || !modalContent) {
+        console.error('Mermaid modal not found');
+        return;
+      }
+      
+      // Update SVG in modal
+      const svg = mermaidElement.querySelector('svg');
+      if (svg) {
+        const existingSvg = modalContent.querySelector('svg');
+        if (existingSvg) {
+          existingSvg.remove();
+        }
+        const svgCopy = svg.cloneNode(true);
+        // Insert before controls
+        const controls = modalContent.querySelector('.mermaid-modal-controls');
+        if (controls) {
+          modalContent.insertBefore(svgCopy, controls);
+        } else {
+          modalContent.insertBefore(svgCopy, modalContent.firstChild);
+        }
+      } else {
+        console.warn('No SVG found in Mermaid element');
+        return;
+      }
+      
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+      resetMermaidZoom();
+    }
+    
+    function closeMermaidModal() {
+      const modal = document.getElementById('mermaid-modal');
+      if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+    }
+    
+    let currentZoom = 1;
+    
+    function zoomMermaidDiagram(factor) {
+      const modalContent = document.getElementById('mermaid-modal-content');
+      const zoomInfo = document.getElementById('mermaid-zoom-info');
+      
+      if (!modalContent) return;
+      
+      currentZoom *= factor;
+      currentZoom = Math.max(0.5, Math.min(5, currentZoom)); // Limit zoom between 50% and 500%
+      
+      modalContent.style.transform = 'scale(' + currentZoom + ')';
+      
+      if (zoomInfo) {
+        zoomInfo.textContent = Math.round(currentZoom * 100) + '%';
+      }
+    }
+    
+    function resetMermaidZoom() {
+      currentZoom = 1;
+      const modalContent = document.getElementById('mermaid-modal-content');
+      const zoomInfo = document.getElementById('mermaid-zoom-info');
+      
+      if (modalContent) {
+        modalContent.style.transform = 'scale(1)';
+        modalContent.scrollLeft = 0;
+        modalContent.scrollTop = 0;
+      }
+      
+      if (zoomInfo) {
+        zoomInfo.textContent = '100%';
+      }
+    }
+    
+    // Apply modal support to existing Mermaid diagrams when theme changes
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(function() {
+        const existingMermaids = document.querySelectorAll('.mermaid:not(.mermaid-modal-enabled)');
+        existingMermaids.forEach(function(el) {
+          const svg = el.querySelector('svg');
+          if (svg) {
+            addMermaidModalSupport(el);
+          }
+        });
+      }, 1000);
+    });
+  </script>
+</body>
+</html>
