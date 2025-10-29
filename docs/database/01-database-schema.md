@@ -345,7 +345,295 @@ CREATE INDEX idx_follows_following ON follows(following_id);
 
 ### Main ER Diagram - Core Entities
 
+```mermaid
+erDiagram
+    %% === AUTHENTICATION (Supabase Auth) ===
+    AUTH_USERS {
+        uuid id PK "Supabase Auth User ID"
+        text email "User Email"
+        timestamptz created_at "Account Creation"
+        timestamptz updated_at "Last Update"
+        timestamptz last_sign_in_at "Last Login"
+        boolean email_confirmed "Email Confirmed"
+    }
 
+    %% === MAIN USER PROFILES (Optimized - No Duplication) ===
+    PROFILES {
+        uuid id PK "References auth.users(id)"
+        text username UK "Unique Username"
+        text full_name "Full Display Name"
+        text avatar_url "Profile Picture URL"
+        text bio "User Biography"
+        date date_of_birth "Date of Birth"
+        text gender "Gender Preference"
+        text fitness_level "Fitness Level"
+        text timezone "User Timezone"
+        text language "Preferred Language"
+        boolean is_active "Account Status"
+        jsonb preferences "User Preferences"
+        jsonb social_links "Social Media Links"
+        timestamptz created_at "Profile Creation"
+        timestamptz updated_at "Last Update"
+    }
+
+    %% === DETAILED PERSONAL INFORMATION ===
+    USER_PERSONAL_INFO {
+        uuid id PK "Unique ID"
+        uuid user_id FK "Reference to profiles"
+        integer age "Age (13-120)"
+        decimal weight_kg "Weight in kg"
+        integer height_cm "Height in cm"
+        decimal bmi "Calculated BMI"
+        decimal body_fat_percentage "Body Fat %"
+        timestamptz created_at "Creation Date"
+        timestamptz updated_at "Last Update"
+    }
+
+    USER_FITNESS_PROFILE {
+        uuid id PK "Unique ID"
+        uuid user_id FK "Reference to profiles"
+        text experience_level "Experience Level"
+        text primary_goal "Primary Fitness Goal"
+        text[] secondary_goals "Secondary Goals"
+        integer workout_frequency "Days per Week"
+        integer preferred_workout_duration "Duration in Minutes"
+        text[] available_equipment "Available Equipment"
+        jsonb workout_preferences "Workout Preferences"
+        text[] injury_history "Injury History"
+        text[] medical_restrictions "Medical Restrictions"
+        text fitness_goals_timeline "Goals Timeline"
+        integer motivation_level "Motivation Level (1-10)"
+        timestamptz created_at "Creation Date"
+        timestamptz updated_at "Last Update"
+    }
+
+    USER_DIETARY_PREFERENCES {
+        uuid id PK "Unique ID"
+        uuid user_id FK "Reference to profiles"
+        text[] dietary_restrictions "Dietary Restrictions"
+        text[] allergies "Food Allergies"
+        text[] preferred_cuisines "Preferred Cuisines"
+        text[] disliked_foods "Disliked Foods"
+        integer daily_calorie_target "Daily Calorie Target"
+        decimal protein_target_percentage "Protein Target %"
+        decimal carb_target_percentage "Carb Target %"
+        decimal fat_target_percentage "Fat Target %"
+        text meal_preferences "Meal Preferences"
+        timestamptz created_at "Creation Date"
+        timestamptz updated_at "Last Update"
+    }
+
+    USER_STATS {
+        uuid id PK "Unique ID"
+        uuid user_id FK "Reference to profiles"
+        decimal height_cm "Height in cm"
+        decimal weight_kg "Weight in kg"
+        decimal body_fat_percentage "Body Fat %"
+        decimal target_weight_kg "Target Weight"
+        timestamptz recorded_at "Record Date"
+    }
+
+    %% === EXERCISES AND WORKOUTS ===
+    EXERCISES {
+        uuid id PK "Unique ID"
+        text name "Exercise Name"
+        text description "Detailed Description"
+        text muscle_group "Primary Muscle Group"
+        text[] muscle_groups "Secondary Muscle Groups"
+        text[] equipment "Required Equipment"
+        text difficulty "Difficulty Level"
+        text instructions "Execution Instructions"
+        text video_url "Demo Video URL"
+        text image_url "Image URL"
+        text[] tags "Exercise Tags"
+        boolean is_public "Public Visibility"
+        uuid created_by FK "Exercise Creator"
+        timestamptz created_at "Creation Date"
+        timestamptz updated_at "Last Update"
+    }
+
+    WORKOUTS {
+        uuid id PK "Unique ID"
+        uuid user_id FK "Reference to profiles"
+        text name "Workout Name"
+        text description "Workout Description"
+        text type "Workout Type"
+        text difficulty "Workout Difficulty"
+        integer duration_minutes "Duration in Minutes"
+        boolean is_template "Is Template"
+        boolean is_public "Public Visibility"
+        boolean is_shared "Is Shared"
+        text target_goal "Workout Target Goal"
+        text target_level "Target Level"
+        integer days_per_week "Days per Week"
+        text[] equipment_required "Required Equipment"
+        text user_notes "User Notes"
+        text[] tags "Workout Tags"
+        integer share_count "Share Counter"
+        integer like_count "Like Counter"
+        timestamptz created_at "Creation Date"
+        timestamptz updated_at "Last Update"
+    }
+
+    SHARED_WORKOUTS {
+        uuid id PK "Unique ID"
+        uuid original_workout_id FK "Reference to original workout"
+        uuid shared_by_user_id FK "User who shares"
+        uuid shared_with_user_id FK "User who receives"
+        timestamptz shared_at "Share Date"
+        boolean is_accepted "Accepted by Recipient"
+        timestamptz accepted_at "Acceptance Date"
+    }
+
+    WORKOUT_EXERCISES {
+        uuid id PK "Unique ID"
+        uuid workout_id FK "Reference to workout"
+        uuid exercise_id FK "Reference to exercise"
+        integer order_index "Order in Workout"
+        integer sets "Number of Sets"
+        integer reps "Number of Repetitions"
+        decimal weight_kg "Weight in kg"
+        integer rest_seconds "Rest in Seconds"
+        text notes "Specific Notes"
+    }
+
+    WORKOUT_SESSIONS {
+        uuid id PK "Unique ID"
+        uuid user_id FK "Reference to profiles"
+        uuid workout_id FK "Reference to workout"
+        timestamptz started_at "Start Time"
+        timestamptz completed_at "Completion Time"
+        integer duration_minutes "Duration in Minutes"
+        integer calories_burned "Calories Burned"
+        text notes "Session Notes"
+        timestamptz created_at "Creation Date"
+    }
+
+    %% === SOCIAL FEATURES ===
+    POSTS {
+        uuid id PK "Unique ID"
+        uuid user_id FK "Reference to profiles"
+        text content "Post Content"
+        text post_type "Post Type"
+        uuid workout_id FK "Reference to workout (optional)"
+        text[] image_urls "Image URLs"
+        text video_url "Video URL"
+        text[] hashtags "Post Hashtags"
+        integer likes_count "Likes Counter"
+        integer comments_count "Comments Counter"
+        integer shares_count "Shares Counter"
+        integer reposts_count "Reposts Counter"
+        boolean is_public "Public Visibility"
+        boolean is_original "Is Original Content"
+        uuid original_post_id FK "Reference to original post (reposts)"
+        uuid shared_from_user_id FK "User who originally shared"
+        timestamptz created_at "Creation Date"
+        timestamptz updated_at "Last Update"
+    }
+
+    POST_LIKES {
+        uuid id PK "Unique ID"
+        uuid user_id FK "Reference to profiles"
+        uuid post_id FK "Reference to post"
+        timestamptz created_at "Creation Date"
+    }
+
+    POST_COMMENTS {
+        uuid id PK "Unique ID"
+        uuid user_id FK "Reference to profiles"
+        uuid post_id FK "Reference to post"
+        text content "Comment Content"
+        uuid parent_comment_id FK "Reference to parent comment (replies)"
+        timestamptz created_at "Creation Date"
+        timestamptz updated_at "Last Update"
+    }
+
+    POST_SHARES {
+        uuid id PK "Unique ID"
+        uuid post_id FK "Reference to post"
+        uuid shared_by_user_id FK "User who shares"
+        uuid shared_with_user_id FK "User who receives"
+        text share_type "Share Type"
+        timestamptz shared_at "Share Date"
+    }
+
+    POST_REPOSTS {
+        uuid id PK "Unique ID"
+        uuid original_post_id FK "Reference to original post"
+        uuid reposted_by_user_id FK "User who reposts"
+        timestamptz reposted_at "Repost Date"
+    }
+
+    %% === FOLLOW SYSTEM ===
+    FOLLOWS {
+        uuid id PK "Unique ID"
+        uuid follower_id FK "User who follows"
+        uuid following_id FK "User being followed"
+        timestamptz created_at "Follow Date"
+    }
+
+    %% === USER CONFIGURATION ===
+    USER_SETTINGS {
+        uuid id PK "Unique ID"
+        uuid user_id FK "Reference to profiles"
+        boolean email_notifications "Email Notifications"
+        boolean push_notifications "Push Notifications"
+        boolean workout_reminders "Workout Reminders"
+        text timezone "Timezone"
+        text language "Preferred Language"
+        text theme "App Theme"
+        boolean profile_visibility "Profile Visibility"
+        boolean workout_visibility "Workout Visibility"
+        boolean progress_visibility "Progress Visibility"
+        timestamptz created_at "Creation Date"
+        timestamptz updated_at "Last Update"
+    }
+
+    %% === MAIN RELATIONSHIPS ===
+    %% Authentication and Profiles
+    AUTH_USERS ||--|| PROFILES : "authenticates"
+
+    %% User and Personal Information
+    PROFILES ||--o{ USER_PERSONAL_INFO : "has"
+    PROFILES ||--o{ USER_FITNESS_PROFILE : "has"
+    PROFILES ||--o{ USER_DIETARY_PREFERENCES : "has"
+    PROFILES ||--o{ USER_STATS : "records"
+    PROFILES ||--|| USER_SETTINGS : "configures"
+
+    %% User and Content
+    PROFILES ||--o{ EXERCISES : "creates"
+    PROFILES ||--o{ WORKOUTS : "creates"
+    PROFILES ||--o{ POSTS : "publishes"
+    PROFILES ||--o{ WORKOUT_SESSIONS : "performs"
+
+    %% Social System
+    PROFILES ||--o{ FOLLOWS : "follows"
+    PROFILES ||--o{ FOLLOWS : "followed_by"
+    PROFILES ||--o{ POST_LIKES : "likes"
+    PROFILES ||--o{ POST_COMMENTS : "comments"
+    PROFILES ||--o{ POST_SHARES : "shares"
+    PROFILES ||--o{ POST_REPOSTS : "reposts"
+    PROFILES ||--o{ SHARED_WORKOUTS : "shares_workout"
+    PROFILES ||--o{ SHARED_WORKOUTS : "receives_workout"
+
+    %% Workouts and Exercises
+    WORKOUTS ||--o{ WORKOUT_EXERCISES : "contains"
+    EXERCISES ||--o{ WORKOUT_EXERCISES : "included_in"
+    WORKOUTS ||--o{ WORKOUT_SESSIONS : "executed_as"
+    WORKOUTS ||--o{ SHARED_WORKOUTS : "shared_as"
+    WORKOUTS ||--o{ POSTS : "featured_in"
+
+    %% Posts and Interactions
+    POSTS ||--o{ POST_LIKES : "receives_likes"
+    POSTS ||--o{ POST_COMMENTS : "has_comments"
+    POSTS ||--o{ POST_SHARES : "is_shared"
+    POSTS ||--o{ POST_REPOSTS : "is_reposted"
+    POST_COMMENTS ||--o{ POST_COMMENTS : "replies_to"
+
+    %% Sharing Relationships
+    POSTS ||--o{ POST_SHARES : "shared_via"
+    POSTS ||--o{ POST_REPOSTS : "reposted_as"
+```
 
 ### Social Relationships Diagram
 
