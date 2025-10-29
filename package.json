@@ -1,7 +1,7 @@
 {
   "name": "pti-gympal-doc",
   "version": "1.0.0",
-  "description": "Documentación completa del proyecto GymPal - Plataforma social de fitness con inteligencia artificial",
+  "description": "Complete technical documentation for GymPal project - Social fitness platform with integrated artificial intelligence",
   "main": "index.js",
   "scripts": {
     "dev": "python -m http.server 8000",
@@ -11,8 +11,17 @@
     "lint": "markdownlint docs/**/*.md",
     "lint:fix": "markdownlint --fix docs/**/*.md",
     "validate": "markdownlint docs/**/*.md && echo 'All markdown files are valid'",
-    "deploy": "echo 'Deploy to GitHub Pages via GitHub Actions'"
+    "deploy": "echo 'Deploy to GitHub Pages via GitHub Actions'",
+    "docker:build": "docker build -t gympal-docs .",
+    "docker:run": "docker run -d -p 3000:3000 --name gympal-docs gympal-docs",
+    "docker:stop": "docker stop gympal-docs && docker rm gympal-docs",
+    "docker:logs": "docker logs -f gympal-docs",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:restart": "docker-compose restart",
+    "docker:logs:compose": "docker-compose logs -f"
   },
+  "packageManager": "pnpm@8.15.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/username/PTI-GymPalDoc.git"
@@ -30,7 +39,7 @@
     "kubernetes",
     "devops"
   ],
-  "author": "Equipo GymPal FIB-UPC",
+  "author": "GymPal Team FIB-UPC",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/username/PTI-GymPalDoc/issues"
@@ -41,6 +50,6 @@
   },
   "engines": {
     "node": ">=18.0.0",
-    "npm": ">=8.0.0"
+    "pnpm": ">=8.0.0"
   }
 }
