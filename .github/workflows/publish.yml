@@ -22,11 +22,20 @@ jobs:
         with:
           version: 8
 
+      - name: Check for lock file
+        id: check_lock
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            echo "has_lock=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_lock=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
+          cache: ${{ steps.check_lock.outputs.has_lock && 'pnpm' || '' }}
 
       - name: Install dependencies
         run: |
