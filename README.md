@@ -6,33 +6,42 @@ Complete technical documentation repository for the **GymPal** project - Social 
 
 This repository contains the complete technical documentation for the GymPal project, organized in a structured way to facilitate navigation and maintenance.
 
-### 📁 **Main Structure**
+## 🌐 **Web Documentation**
 
-```
-PTI-GymPalDoc/
-├── GYMPAL.md                   # 📖 Complete documentation in a single file
-├── gympal.html                 # 🌐 HTML version of the documentation
-├── docs/                       # 📚 Structured documentation
-│   ├── 00-index.md            # 📑 General index
-│   ├── README.md              # 📖 Documentation README
-│   ├── executive-summary.md   # 📊 Executive summary
-│   ├── architecture/          # 🏗️ System architecture
-│   ├── api/                   # 🔌 API documentation
-│   ├── database/              # 🗄️ Database
-│   ├── devops/                # 🚀 DevOps and CI/CD
-│   ├── testing/               # 🧪 Testing strategies
-│   ├── security/              # 🔐 Security and compliance
-│   ├── ai/                    # 🤖 AI integration
-│   ├── team/                  # 👥 Team organization
-│   ├── configuration/         # ⚙️ Project configuration
-│   ├── quick-start/           # 🚀 Getting started guides
-│   └── diagrams/              # 🎨 Mermaid diagrams
-├── .github/workflows/         # 🔄 GitHub Actions workflows
-├── package.json               # 📦 Project configuration
-├── .gitignore                 # 🚫 Files to ignore
-├── LICENSE                    # 📄 MIT License
+This documentation can be viewed in a web interface using Docker.
+
+### **Quick Start with Docker**
+
+#### Option 1: Using Docker Compose (Recommended)
+
+```bash
+# Build and start the documentation server
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop the server
+docker-compose down
 ```
 
+The documentation will be available at: **http://localhost:3000**
+
+#### Option 2: Using Docker directly
+
+```bash
+# Build the Docker image
+docker build -t gympal-docs .
+
+# Run the container
+docker run -d -p 3000:3000 --name gympal-docs gympal-docs
+
+# Stop the container
+docker stop gympal-docs
+docker rm gympal-docs
+```
+
+Then open: **http://localhost:3000**
 
 ## 🔧 **Repository Usage**
 
@@ -45,7 +54,7 @@ cd PTI-GymPalDoc
 open GYMPAL.md
 
 # View HTML documentation
-open gympal.html
+open GYMPAL.html
 
 # Navigate structured documentation
 cd docs/
@@ -57,12 +66,10 @@ open 00-index.md
 - **General Architecture**: `docs/architecture/`
 - **Project Progress**: `docs/team/`
 
-## 🌐 **Deployment**
+## 📄 **License**
 
-### **GitHub Pages**
-- **Main URL**: `https://username.github.io/PTI-GymPalDoc/`
-- **HTML Documentation**: `https://username.github.io/PTI-GymPalDoc/gympal.html`
-- **Structured Documentation**: `https://username.github.io/PTI-GymPalDoc/docs/`
-- 📖 **[Complete Documentation](GYMPAL.md)** - Everything in one file
-- 🌐 **[HTML Version](gympal.html)** - With interactive diagrams
-- 📚 **[Structured Documentation](docs/)** - Modular navigation
+This project is under the MIT License. See the [LICENSE](LICENSE) file for more details.
+
+---
+
+**Powered by Docsify** 🌟
