@@ -1,0 +1,31 @@
+services:
+  docs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gympal-docs
+    ports:
+      - "3000:3000"
+    # volumes:
+    #   # Optional: mount docs directory for live development
+    #   # Uncomment if you want real-time changes without rebuilding
+    #   # - ./docs:/usr/share/nginx/html/docs:ro
+    #   # - ./index.html:/usr/share/nginx/html/index.html:ro
+    #   # - ./_sidebar.md:/usr/share/nginx/html/_sidebar.md:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "com.gympal.service=documentation"
+      - "com.gympal.version=1.0.0"
+      - "description=GymPal Technical Documentation Web Server"
+    networks:
+      - gympal-docs-network
+
+networks:
+  gympal-docs-network:
+    driver: bridge
