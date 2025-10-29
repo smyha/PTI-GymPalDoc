@@ -1,4 +1,4 @@
-# 2. Stack Tecnológico Propuesto 💻
+# 2. Proposed Technology Stack 💻
 
 ## Mejoras y Correcciones Implementadas
 
