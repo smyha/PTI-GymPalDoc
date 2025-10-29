@@ -1,14 +1,14 @@
-# Diagramas Mermaid - GymPal 🎨
+# Mermaid Diagrams - GymPal 🎨
 
-## 📊 **Índice de Diagramas**
+## 📊 **Diagrams Index**
 
 This document contains all Mermaid diagrams used in the GymPal documentation, organized by categories for easy navigation.
 
 ---
 
-## 🏗️ **Arquitectura del Sistema**
+## 🏗️ **System Architecture**
 
-### 1. Arquitectura General
+### 1. General Architecture
 ```mermaid
 graph TB
   subgraph "Frontend Layer"
@@ -61,7 +61,7 @@ graph TB
   DB --> CACHE
 ```
 
-### 2. Arquitectura de Microservicios
+### 2. Microservices Architecture
 ```mermaid
 graph TB
   subgraph "API Gateway"
@@ -108,9 +108,9 @@ graph TB
 
 ---
 
-## 🗄️ **Base de Datos**
+## 🗄️ **Database**
 
-### 1. Diagrama ER Principal - Entidades Core
+### 1. Main ER Diagram - Core Entities
 ```mermaid
 erDiagram
     USERS {
@@ -237,7 +237,7 @@ erDiagram
     EXERCISES ||--o{ WORKOUTS : "included_in"
 ```
 
-### 2. Esquema de Base de Datos Detallado
+### 2. Detailed Database Schema
 ```mermaid
 graph TB
   subgraph "Core Tables"
@@ -287,9 +287,9 @@ graph TB
 
 ---
 
-## 🔄 **Flujos de Comunicación**
+## 🔄 **Communication Flows**
 
-### 1. Flujo de Autenticación
+### 1. Authentication Flow
 ```mermaid
 sequenceDiagram
   participant U as User
@@ -307,7 +307,7 @@ sequenceDiagram
   F->>U: Redirect to dashboard
 ```
 
-### 2. Flujo de Creación de Workout
+### 2. Workout Creation Flow
 ```mermaid
 sequenceDiagram
   participant U as User
@@ -326,7 +326,7 @@ sequenceDiagram
   F->>U: Show success message
 ```
 
-### 3. Flujo de Feed Social
+### 3. Social Feed Flow
 ```mermaid
 sequenceDiagram
   participant U as User
@@ -351,9 +351,9 @@ sequenceDiagram
 
 ---
 
-## 🎯 **Estados del Sistema**
+## 🎯 **System States**
 
-### 1. Estados de Usuario
+### 1. User States
 ```mermaid
 stateDiagram-v2
   [*] --> Unauthenticated
@@ -367,7 +367,7 @@ stateDiagram-v2
   Active --> [*] : Delete account
 ```
 
-### 2. Estados de Workout
+### 2. Workout States
 ```mermaid
 stateDiagram-v2
   [*] --> Draft
@@ -380,7 +380,7 @@ stateDiagram-v2
   Archived --> [*] : Delete
 ```
 
-### 3. Estados de Post
+### 3. Post States
 ```mermaid
 stateDiagram-v2
   [*] --> Creating
@@ -395,7 +395,7 @@ stateDiagram-v2
 
 ---
 
-## 🚀 **DevOps y Despliegue**
+## 🚀 **DevOps and Deployment**
 
 ### 1. Pipeline CI/CD
 ```mermaid
@@ -409,7 +409,7 @@ graph LR
   G --> H[Update Status]
 ```
 
-### 2. Estrategia de Despliegue
+### 2. Deployment Strategy
 ```mermaid
 graph TB
   subgraph "Development"
@@ -451,7 +451,7 @@ graph TB
   CDN --> MONITOR
 ```
 
-### 3. Flujo de Despliegue con ArgoCD
+### 3. ArgoCD Deployment Flow
 ```mermaid
 sequenceDiagram
   participant DEV as Developer
@@ -473,9 +473,9 @@ sequenceDiagram
 
 ---
 
-## 🔐 **Seguridad**
+## 🔐 **Security**
 
-### 1. Flujo de Autenticación y Autorización
+### 1. Authentication and Authorization Flow
 ```mermaid
 sequenceDiagram
   participant U as User
@@ -495,7 +495,7 @@ sequenceDiagram
   F->>U: Store token + redirect
 ```
 
-### 2. Flujo de Autorización
+### 2. Authorization Flow
 ```mermaid
 sequenceDiagram
   participant U as User
@@ -518,7 +518,7 @@ sequenceDiagram
 
 ## 🧪 **Testing**
 
-### 1. Estrategia de Testing
+### 1. Testing Strategy
 ```mermaid
 graph TB
   subgraph "Unit Tests"
@@ -558,7 +558,7 @@ graph TB
   E2E_SOCIAL --> PT_BENCHMARK
 ```
 
-### 2. Flujo de Testing
+### 2. Testing Flow
 ```mermaid
 graph LR
   A[Code Change] --> B[Unit Tests]
@@ -574,7 +574,7 @@ graph LR
 
 ## 📱 **Frontend Architecture**
 
-### 1. Arquitectura de Componentes
+### 1. Components Architecture
 ```mermaid
 graph TB
   subgraph "Pages"
@@ -622,7 +622,7 @@ graph TB
   USE_SOCIAL --> SOCIAL_STORE
 ```
 
-### 2. Flujo de Estado
+### 2. State Flow
 ```mermaid
 graph TB
   subgraph "User Actions"
@@ -715,84 +715,84 @@ graph TB
 
 ---
 
-## 📊 **Resumen de Diagramas**
+## 📊 **Diagrams Summary**
 
-### Categorías de Diagramas
-- **Arquitectura**: 3 diagramas
-- **Base de Datos**: 2 diagramas
-- **Flujos de Comunicación**: 3 diagramas
-- **Estados del Sistema**: 3 diagramas
-- **DevOps**: 3 diagramas
-- **Seguridad**: 2 diagramas
-- **Testing**: 2 diagramas
-- **Frontend**: 2 diagramas
-- **AI Integration**: 2 diagramas
+### Diagram Categories
+- **Architecture**: 3 diagrams
+- **Database**: 2 diagrams
+- **Communication Flows**: 3 diagrams
+- **System States**: 3 diagrams
+- **DevOps**: 3 diagrams
+- **Security**: 2 diagrams
+- **Testing**: 2 diagrams
+- **Frontend**: 2 diagrams
+- **AI Integration**: 2 diagrams
 
-### Total: 22 Diagramas
-
----
-
-## 🎯 **Uso de los Diagramas**
-
-### Para Desarrolladores
-- **Arquitectura**: Entender la estructura del sistema
-- **Flujos**: Comprender las interacciones
-- **Estados**: Manejar la lógica de negocio
-- **Testing**: Diseñar casos de prueba
-
-### Para DevOps
-- **Despliegue**: Entender el pipeline
-- **Infraestructura**: Comprender la arquitectura
-- **Monitoreo**: Identificar puntos de observación
-
-### Para Product Managers
-- **Funcionalidades**: Ver el flujo de usuario
-- **Estados**: Comprender la experiencia de usuario
+### Total: 22 Diagrams
 
 ---
 
-## 🏗️ **Estructura del Proyecto**
+## 🎯 **How to Use the Diagrams**
+
+### For Developers
+- **Architecture**: Understand the system structure
+- **Flows**: Understand interactions
+- **States**: Manage business logic
+- **Testing**: Design test cases
+
+### For DevOps
+- **Deployment**: Understand the pipeline
+- **Infrastructure**: Understand the architecture
+- **Monitoring**: Identify observation points
+
+### For Product Managers
+- **Features**: See user flow
+- **States**: Understand user experience
+
+---
+
+## 🏗️ **Project Structure**
 
 ### Backend
 ```
 backend/
 ├── src/
-│   ├── modules/          # Módulos de negocio
-│   ├── routes/           # Handlers de rutas
-│   ├── shared/           # Utilidades compartidas
-│   └── types/            # Definiciones de tipos
-├── supabase/             # Migraciones y configuración
-├── scripts/              # Scripts de automatización
-├── tests/                # Tests del backend
-└── docs/                 # Documentación específica
+│   ├── modules/          # Business modules
+│   ├── routes/           # Route handlers
+│   ├── shared/           # Shared utilities
+│   └── types/            # Type definitions
+├── supabase/             # Migrations and configuration
+├── scripts/              # Automation scripts
+├── tests/                # Backend tests
+└── docs/                 # Specific documentation
 ```
 
 ### Frontend
 ```
 frontend/
 ├── src/
-│   ├── app/              # App Router de Next.js
-│   ├── components/       # Componentes reutilizables
-│   ├── lib/              # Utilidades y configuraciones
+│   ├── app/              # Next.js App Router
+│   ├── components/       # Reusable components
+│   ├── lib/              # Utilities and configuration
 │   ├── hooks/            # Custom hooks
-│   ├── stores/           # Estado global (Zustand)
-│   └── types/            # Definiciones de tipos
-├── public/               # Archivos estáticos
-├── styles/               # Estilos globales
-└── tests/                # Tests del frontend
+│   ├── stores/           # Global state (Zustand)
+│   └── types/            # Type definitions
+├── public/               # Static files
+├── styles/               # Global styles
+└── tests/                # Frontend tests
 ```
 
-### Documentación
+### Documentation
 ```
 docs/
-├── architecture/         # Arquitectura del sistema
-├── api/                  # Documentación de APIs
-├── database/             # Esquemas y migraciones
-├── devops/               # CI/CD y despliegue
-├── testing/              # Estrategias de testing
-├── security/             # Seguridad y compliance
-├── ai/                   # Integración de IA
-├── team/                 # Organización del equipo
-├── configuration/        # Configuración del proyecto
-└── quick-start/          # Guías de inicio
+├── architecture/         # System architecture
+├── api/                  # API documentation
+├── database/             # Schemas and migrations
+├── devops/               # CI/CD and deployment
+├── testing/              # Testing strategies
+├── security/             # Security and compliance
+├── ai/                   # AI integration
+├── team/                 # Team organization
+├── configuration/        # Project configuration
+└── quick-start/          # Getting started guides
 ```
