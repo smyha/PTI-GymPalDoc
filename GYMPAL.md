@@ -17,12 +17,10 @@
       - [OpenAPI Documentation Status](#openapi-documentation-status)
       - [Database Migrations](#database-migrations)
     - [**1. User Personal Information**](#1-user-personal-information)
-      - [**GET /api/v1/users/personal/info**](#get-apiv1userspersonalinfo)
-      - [**PUT /api/v1/users/personal/info**](#put-apiv1userspersonalinfo)
-      - [**GET /api/v1/users/personal/objectives**](#get-apiv1userspersonalobjectives)
-      - [**PUT /api/v1/users/personal/objectives**](#put-apiv1userspersonalobjectives)
-      - [**GET /api/v1/users/personal/dietary-preferences**](#get-apiv1userspersonaldietary-preferences)
-      - [**PUT /api/v1/users/personal/dietary-preferences**](#put-apiv1userspersonaldietary-preferences)
+      - [**GET /api/v1/personal**](#get-apiv1personal)
+      - [**PUT /api/v1/personal**](#put-apiv1personal)
+      - [**GET /api/v1/personal/fitness-profile**](#get-apiv1personalfitness-profile)
+      - [**PUT /api/v1/personal/fitness-profile**](#put-apiv1personalfitness-profile)
     - [**2. Custom Routines**](#2-custom-routines)
       - [**GET /api/v1/workouts/routines**](#get-apiv1workoutsroutines)
       - [**POST /api/v1/workouts/routines**](#post-apiv1workoutsroutines)
@@ -41,13 +39,9 @@
       - [API Framework Decision](#api-framework-decision)
     - [Data Architecture](#data-architecture)
     - [Data Architecture (Simplified Version)](#data-architecture-simplified-version)
-    - [Database Schema](#database-schema)
-      - [Main Tables](#main-tables)
-      - [Row Level Security (RLS)](#row-level-security-rls)
-      - [Indexes and Optimization](#indexes-and-optimization)
-      - [Database Schema Diagrams](#database-schema-diagrams)
+      - [Database Schema](#database-schema)
         - [Main ER Diagram - Core Entities](#main-er-diagram---core-entities)
-- [Principal ER Diagram (Simplified)](#principal-er-diagram-simplified)
+        - [Main ER Diagram (Simplified)](#main-er-diagram-simplified)
         - [Social Relationships Diagram](#social-relationships-diagram)
         - [Workouts and Exercises Diagram](#workouts-and-exercises-diagram)
         - [User Statistics Diagram](#user-statistics-diagram)
@@ -82,9 +76,9 @@
       - [User Journey Diagram](#user-journey-diagram)
     - [Detailed TypeScript Types](#detailed-typescript-types)
     - [Domain Models (TypeScript)](#domain-models-typescript)
-    - [Repositories (Supabase/Postgres)](#repositories-supabasepostgres)
-    - [Services (Bussiness)](#services-bussiness)
-    - [Controllers (Hono)](#controllers-hono)
+    - [Database Operations (Type-Safe Helpers)](#database-operations-type-safe-helpers)
+    - [Services (Business Logic)](#services-business-logic)
+    - [Routes and Handlers (Hono)](#routes-and-handlers-hono)
     - [AI Orchestration (n8n/Dify)](#ai-orchestration-n8ndify)
   - [3.3 Detailed Backend Structure](#33-detailed-backend-structure)
     - [Configuration (config/)](#configuration-config)
@@ -94,12 +88,11 @@
     - [Libraries (lib/)](#libraries-lib)
       - [db.ts - Database Client](#dbts---database-client)
       - [mailer.ts - Email Service](#mailerts---email-service)
-    - [Controllers (src/handler/)](#controllers-srchandler)
-      - [auth.handler.ts - Authentication Controllers](#authhandlerts---authentication-controllers)
+    - [Module Structure (src/modules/)](#module-structure-srcmodules)
+      - [auth module - Authentication](#auth-module---authentication)
       - [user.handler.ts - User Controllers](#userhandlerts---user-controllers)
-    - [Routes (src/routes/)](#routes-srcroutes)
-      - [auth.routes.ts - Authentication Routes](#authroutests---authentication-routes)
-      - [user.routes.ts - User Routes](#userroutests---user-routes)
+    - [Service Layer (src/modules/\*/service.ts)](#service-layer-srcmodulesservicets)
+  - [**Note**: Account deletion uses a database function (`delete_own_account`) with `SECURITY DEFINER`, allowing users to delete their own accounts without requiring the service role key in application code.](#note-account-deletion-uses-a-database-function-delete_own_account-with-security-definer-allowing-users-to-delete-their-own-accounts-without-requiring-the-service-role-key-in-application-code)
     - [AI and Recommendations](#ai-and-recommendations)
   - [4.1 Frontend API Client](#41-frontend-api-client)
   - [4.3 Testing Strategy](#43-testing-strategy)
@@ -109,8 +102,8 @@
     - [Testing Coverage](#testing-coverage)
     - [Test Examples](#test-examples)
   - [5. AI Integration (Detailed)](#5-ai-integration-detailed)
-    - [Dify Client](#dify-client)
-    - [Context Builder](#context-builder)
+    - [Dify Client (Future Implementation)](#dify-client-future-implementation)
+    - [Context Builder (Future Implementation)](#context-builder-future-implementation)
     - [Frontend Chat Component](#frontend-chat-component)
   - [6. Security and Compliance 🔐](#6-security-and-compliance-)
     - [Security Principles](#security-principles)
@@ -189,10 +182,11 @@
     - [Module Structure Details](#module-structure-details)
       - [**📁 Frontend - Next.js 14 Architecture**](#-frontend---nextjs-14-architecture)
       - [**📁 Backend - Business Modules**](#-backend---business-modules)
-      - [**📁 src/routes/ - Route Handlers**](#-srcroutes---route-handlers)
-      - [**📁 src/shared/ - Shared Utilities**](#-srcshared---shared-utilities)
+      - [**📁 Backend Module Structure**](#-backend-module-structure)
+      - [**📁 src/core/ - Core Infrastructure**](#-srccore---core-infrastructure)
+      - [**📁 src/middleware/ - Global Middleware**](#-srcmiddleware---global-middleware)
       - [**📁 supabase/ - Database**](#-supabase---database)
-      - [**Automation Scripts**](#automation-scripts)
+      - [**Scripts and Automation**](#scripts-and-automation)
     - [Available Development Commands](#available-development-commands)
     - [CI/CD Pipeline](#cicd-pipeline-1)
       - [**Main Pipeline - Push to Main**](#main-pipeline---push-to-main)
@@ -295,7 +289,7 @@ graph TB
 | **GitOps** | ArgoCD | Declarative deployments |
 | **Monitoring** | Prometheus + Grafana | Metrics and dashboards |
 | **Logs** | Loki + Promtail | Log aggregation |
-| **Package Manager** | npm/yarn | Dependency management |
+| **Package Manager** | pnpm | Fast, disk space efficient package manager |
 | **Testing** | Vitest + Supertest | Modern and fast testing |
 | **Validation** | Zod | Runtime type-safe validation |
 
@@ -316,147 +310,160 @@ graph TB
 ### Backend Architecture 
 
 #### Backend Project Structure
+
+The backend follows a modern modular architecture with Hono framework:
+
 ```
-backend/
-├── config/           # Environment variables configuration
-│   └── env.ts        # Variable validation with Zod
-├── doc/             # API documentation schemas
-│   └── schemas.ts    # Zod schemas for validation
-├── lib/             # Shared libraries
-│   ├── db.ts        # Supabase client with helpers
-│   ├── auth.ts      # JWT authentication utilities
-│   ├── mailer.ts    # Email service with Nodemailer
-│   └── types.ts     # Database types
+PTI-GymPalBack/
 ├── src/
-│   ├── routes/      # 🎯 Professional Controllers (Handlers)
-│   │   ├── auth.handler.ts          # Authentication with OpenAPI docs
-│   │   ├── user.handler.ts          # User management with validation
-│   │   ├── workout.handler.ts       # Workouts and exercises
-│   │   ├── social.handler.ts        # Social features
-│   │   ├── personal.handler.ts      # User personal information
-│   │   ├── routines.handler.ts      # Custom routines
-│   │   ├── posts.handler.ts         # Advanced social posts
-│   │   ├── dashboard.handler.ts     # Analytics and statistics
-│   │   └── settings.handler.ts      # User configuration
-│   ├── modules/     # 📦 Functionality Modules (Services)
-│   │   ├── auth/    # Complete authentication module
-│   │   │   ├── auth.service.ts    # Business logic
-│   │   │   ├── auth.types.ts      # Specific types
-│   │   │   └── auth.middleware.ts # Specific middleware
-│   │   ├── users/   # Complete users module
-│   │   │   ├── user.service.ts    # User logic
-│   │   │   ├── user.types.ts      # User types
-│   │   │   └── user.middleware.ts # User validation
-│   │   ├── workouts/ # Complete workouts module
-│   │   │   ├── workout.service.ts    # Workout logic
-│   │   │   ├── workout.types.ts      # Workout types
-│   │   │   └── workout.middleware.ts # Workout validation
-│   │   ├── social/   # Complete social module
-│   │   │   ├── social.service.ts    # Social logic
-│   │   │   ├── social.types.ts      # Social types
-│   │   │   └── social.middleware.ts # Social validation
-│   │   └── ai/       # AI module 
-│   ├── shared/      # 🔧 Shared utilities
-│   │   ├── middleware/ # Global middlewares
-│   │   │   ├── error.middleware.ts
-│   │   │   ├── rate-limit.middleware.ts
-│   │   │   └── validation.middleware.ts
-│   │   └── utils/   # Common utilities
-│   │       ├── helpers.ts
-│   │       ├── constants.ts
-│   │       └── response.ts
-│   └── index.ts     # 🚀 Optimized entry point
-├── supabase/        # Supabase configuration
-│   ├── migrations/  # Database migrations
-│   ├── config.toml  # Supabase configuration
-│   └── seed.sql     # Test data
-├── tests/           # Project tests
-├── docs/            # Project documentation
-│   ├── README.md              # API documentation
-│   └── OPENAPI_DOCUMENTATION.md # OpenAPI documentation summary
-├── scripts/         # Utility scripts
-│   ├── generate-openapi.js          # Basic OpenAPI generation
-│   └── generate-complete-openapi-v2.js # Complete OpenAPI generation
-├── package.json
-├── tsconfig.json
-├── vitest.config.ts
-├── openapi.json     # OpenAPI 3.1 specification 
-├── env.example      # Example environment variables
-└── Dockerfile
+│   ├── app.ts                    # Main Hono application setup
+│   ├── server.ts                 # Server entry point
+│   │
+│   ├── core/                     # Core application infrastructure
+│   │   ├── config/               # Configuration files
+│   │   │   ├── database.ts       # Supabase client configuration
+│   │   │   ├── database-helpers.ts # Type-safe DB operation helpers
+│   │   │   ├── env.ts            # Environment variables with Zod
+│   │   │   └── logger.ts         # Pino logger configuration
+│   │   ├── constants/            # Application constants
+│   │   │   └── api.ts            # HTTP status codes, error codes
+│   │   ├── routes.ts             # Centralized route constants
+│   │   ├── types/                # Type definitions
+│   │   │   └── database.types.ts # Supabase generated types
+│   │   └── utils/                # Utility functions
+│   │       ├── response.ts       # Response helpers
+│   │       ├── errors.ts         # Custom error classes
+│   │       └── auth.ts           # Auth utilities
+│   │
+│   ├── middleware/               # HTTP middleware
+│   │   ├── auth.ts              # Authentication middleware
+│   │   ├── error.ts             # Global error handler
+│   │   ├── logging.ts           # Request logging with Pino
+│   │   ├── validation.ts        # Zod validation middleware
+│   │   └── rate-limit.ts         # Rate limiting middleware
+│   │
+│   ├── modules/                  # Business domain modules
+│   │   ├── auth/                # Authentication module
+│   │   │   ├── routes.ts         # Route definitions with @openapi
+│   │   │   ├── handlers.ts       # HTTP request handlers
+│   │   │   ├── service.ts        # Business logic
+│   │   │   ├── schemas.ts       # Zod validation schemas
+│   │   │   └── types.ts         # TypeScript type definitions
+│   │   ├── users/               # User management module
+│   │   ├── workouts/            # Workout management module
+│   │   ├── exercises/           # Exercise library module
+│   │   ├── social/              # Social features module
+│   │   ├── dashboard/           # Dashboard analytics module
+│   │   ├── personal/            # Personal data module
+│   │   └── settings/            # User settings module
+│   │
+│   └── plugins/                  # Hono plugins
+│       ├── health.ts            # Health check plugin
+│       └── openapi.ts           # OpenAPI documentation plugin
+│
+├── supabase/                     # Database configuration
+│   └── migrations/               # Database migrations
+│       ├── 001_schema.sql        # Database schema
+│       ├── 002_rls_policies.sql  # Row Level Security
+│       ├── 003_seed_data.sql     # Seed data (optional)
+│       └── 004_triggers.sql      # Triggers and database functions
+│
+├── dist/                         # Compiled TypeScript output
+├── Dockerfile                    # Production Docker image
+├── docker-compose.yml            # Development environment
+├── package.json                  # Dependencies
+├── tsconfig.json                 # TypeScript configuration
+└── openapi.json                  # OpenAPI specification
 ```
+
+**Key Architectural Features:**
+- **Modular Structure**: Each module contains routes, handlers, service, schemas, and types
+- **Type-Safe Database Operations**: Helper functions with TypeScript generics (no `as any` casts)
+- **Self-Service Account Deletion**: Database function allows users to delete accounts without service role key
+- **Centralized Routes**: All route constants defined in `src/core/routes.ts`
+- **Structured Logging**: Pino for JSON structured logging
+- **OpenAPI Integration**: Automatic documentation from `@openapi` comments in routes
 
 #### OpenAPI Documentation Status
 
 
 ```mermaid
 graph TB
-  subgraph "Authentication Flow"
-    LOGIN[POST /auth/login]
+  subgraph "System Endpoints"
+    ROOT[GET /]
+    HEALTH[GET /health]
+    REFERENCE[GET /reference]
+    OPENAPI_JSON[GET /openapi.json]
+  end
+  
+  subgraph "Authentication (8 endpoints)"
     REGISTER[POST /auth/register]
-    REFRESH[POST /auth/refresh]
-    LOGOUT[POST /auth/logout]
+    LOGIN[POST /auth/login]
     ME[GET /auth/me]
+    LOGOUT[POST /auth/logout]
+    REFRESH[POST /auth/refresh]
+    RESET_PWD[POST /auth/reset-password]
+    CHANGE_PWD[PUT /auth/change-password/:id]
+    DELETE_ACC[DELETE /auth/delete-account/:id]
   end
   
-  subgraph "User Management"
-    USER_PROFILE[GET /users/:id]
-    UPDATE_PROFILE[PATCH /users/:id]
-    USER_SUMMARY[GET /users/:id/summary]
-    USER_ACTIVITY[GET /users/:id/activity]
-    AVATAR[POST /users/:id/avatar]
+  subgraph "Users (5 endpoints)"
+    USER_PROFILE[GET /users/profile]
+    UPDATE_PROFILE[PUT /users/profile]
+    GET_USER[GET /users/:id]
+    SEARCH_USERS[GET /users/search]
+    USER_STATS[GET /users/stats]
   end
   
-  subgraph "Workout Management"
-    EXERCISES[GET /exercises]
+  subgraph "Workouts (5 endpoints)"
+    LIST_WORKOUTS[GET /workouts]
     CREATE_WORKOUT[POST /workouts]
     GET_WORKOUT[GET /workouts/:id]
-    UPDATE_WORKOUT[PATCH /workouts/:id]
-    LOG_WORKOUT[POST /workouts/:id/logs]
-    WORKOUT_PROGRESS[GET /workouts/:id/progress]
+    UPDATE_WORKOUT[PUT /workouts/:id]
     DELETE_WORKOUT[DELETE /workouts/:id]
   end
   
-  subgraph "Nutrition Management"
-    FOODS[GET /foods]
-    CREATE_DIET[POST /diets]
-    GET_DIET[GET /diets/:id]
-    UPDATE_DIET[PATCH /diets/:id]
-    DIET_MEALS[GET /diets/:id/meals]
-    LOG_DIET[POST /diets/:id/logs]
+  subgraph "Exercises (8 endpoints)"
+    EX_CATEGORIES[GET /exercises/categories]
+    EX_MUSCLE[GET /exercises/muscle-groups]
+    EX_EQUIPMENT[GET /exercises/equipment]
+    LIST_EXERCISES[GET /exercises]
+    CREATE_EXERCISE[POST /exercises]
+    GET_EXERCISE[GET /exercises/:id]
+    UPDATE_EXERCISE[PUT /exercises/:id]
+    DELETE_EXERCISE[DELETE /exercises/:id]
   end
   
-  subgraph "Schedule Management"
-    CREATE_SCHEDULE[POST /schedules]
-    GET_SCHEDULE[GET /schedules/:id]
-    UPDATE_SCHEDULE[PATCH /schedules/:id]
-    SCHEDULE_ITEMS[GET /schedules/:id/items]
-    WEEKLY_VIEW[GET /schedules/weekly]
-    MONTHLY_VIEW[GET /schedules/monthly]
-    YEARLY_VIEW[GET /schedules/yearly]
+  subgraph "Social (7 endpoints)"
+    LIST_POSTS[GET /social/posts]
+    CREATE_POST[POST /social/posts]
+    GET_POST[GET /social/posts/:id]
+    UPDATE_POST[PUT /social/posts/:id]
+    DELETE_POST[DELETE /social/posts/:id]
+    LIKE_POST[POST /social/posts/:id/like]
+    UNLIKE_POST[POST /social/posts/:id/unlike]
   end
   
-  subgraph "Calorie Tracking"
-    LOG_CALORIES[POST /calories/log]
-    GET_CALORIES[GET /calories/:date]
-    CALORIE_HISTORY[GET /calories/history]
-    FOOD_SEARCH[GET /foods/search]
-    ADD_FOOD[POST /foods/custom]
+  subgraph "Dashboard (3 endpoints)"
+    DASH_OVERVIEW[GET /dashboard]
+    DASH_STATS[GET /dashboard/stats]
+    DASH_ACTIVITY[GET /dashboard/activity]
   end
   
-  subgraph "Social Features"
-    FEED[GET /feed]
-    CREATE_POST[POST /posts]
-    LIKE_POST[POST /posts/:id/like]
-    COMMENT[POST /posts/:id/comments]
-    FOLLOW[POST /users/:id/follow]
-    FOLLOWERS[GET /users/:id/followers]
+  subgraph "Personal (4 endpoints)"
+    GET_PERSONAL[GET /personal]
+    UPDATE_PERSONAL[PUT /personal]
+    GET_FITNESS[GET /personal/fitness-profile]
+    UPDATE_FITNESS[PUT /personal/fitness-profile]
   end
   
-  subgraph "AI Features"
-    AI_CHAT[POST /ai/chat]
-    AI_RECOMMENDATIONS[GET /ai/recommendations]
-    GENERATE_PLAN[POST /ai/generate-plan]
-    CHAT_HISTORY[GET /ai/chat/history]
+  subgraph "Settings (6 endpoints)"
+    GET_SETTINGS[GET /settings]
+    UPDATE_SETTINGS[PUT /settings]
+    GET_NOTIF[GET /settings/notifications]
+    UPDATE_NOTIF[PUT /settings/notifications]
+    GET_PRIVACY[GET /settings/privacy]
+    UPDATE_PRIVACY[PUT /settings/privacy]
   end
 ```
 
@@ -471,17 +478,17 @@ graph TB
 
 | Category | Endpoints | Description |
 |----------|-----------|-------------|
-| 🔐 **Authentication** | 6 | Register, login, refresh, logout, profile, password change |
-| 👤 **Users** | 6 | Profile, settings, stats, public profile |
-| 💪 **Workouts** | 5 | Basic workouts CRUD |
-| 📱 **Social** | 11 | Feed, posts, likes, comments, follows |
-| 👤 **Personal** | 6 | Personal info, objectives, dietary preferences |
-| 🏋️ **Routines** | 7 | Custom routines CRUD, duplicate, share |
-| 📝 **Advanced Posts** | 4 | Trending, search, share, repost |
-| 📊 **Dashboard** | 2 | Stats and recent activity |
-| ⚙️ **Settings** | 3 | General user settings |
+| 🔐 **Authentication** | 8 | Register, login, logout, refresh, me, reset-password, change-password, delete-account |
+| 👤 **Users** | 5 | Profile, update profile, get by ID, search, stats |
+| 💪 **Workouts** | 5 | List, create, get by ID, update, delete |
+| 🏋️ **Exercises** | 8 | Categories, muscle-groups, equipment, list, create, get by ID, update, delete |
+| 📱 **Social** | 7 | List posts, create, get by ID, update, delete, like, unlike |
+| 📊 **Dashboard** | 3 | Overview, stats, recent activity |
+| 👤 **Personal** | 4 | Get/update info, get/update fitness profile |
+| ⚙️ **Settings** | 6 | Get/update settings, get/update notifications, get/update privacy |
+| 📋 **System** | 4 | Root, health, reference, openapi.json |
 
-**✅ Complete Documentation (31 Endpoints):**
+**✅ Complete Documentation (46 API Endpoints + 4 System Endpoints = 50 Total):**
 
 - `GET /` - General API information
 - `GET /reference` - Interactive documentation (Scalar)
@@ -491,166 +498,129 @@ graph TB
 **🔐 Authentication (`/api/v1/auth`):**
 - `POST /register` - Register user
 - `POST /login` - User login
-- `POST /refresh` - Refresh token
-- `POST /logout` - Logout
 - `GET /me` - Authenticated user profile
-- `POST /change-password` - Change password
-- `POST /forgot-password` - Request password reset
+- `POST /logout` - Logout
+- `POST /refresh` - Refresh token
 - `POST /reset-password` - Reset password with token
+- `PUT /change-password/:id` - Change password
+- `DELETE /delete-account/:id` - Delete account (self-service, no service role key required)
 
 **👤 Users (`/api/v1/users`):**
-- `GET /profile` - Get user profile
-- `PUT /profile` - Update user profile
-- `GET /settings` - Get user settings
-- `PUT /settings` - Update user settings
-- `GET /stats` - User stats
-- `GET /:userId` - Get public profile
-- `GET /:userId/summary` - Get public user summary
-- `GET /:userId/activity` - Get user's recent activity
-- `POST /:userId/avatar` - Upload user avatar
+- `GET /profile` - Get authenticated user profile
+- `PUT /profile` - Update authenticated user profile
+- `GET /:id` - Get public user profile by ID
+- `GET /search` - Search users by username or name
+- `GET /stats` - Get authenticated user statistics
 
-**📊 Personal Information (`/api/v1/users/personal`):**
-- `GET /info` - Get complete personal information
-- `PUT /info` - Update personal info (age, gender, weight, height, BMI)
-- `GET /objectives` - Get objectives & experience level
-- `PUT /objectives` - Update objectives & experience level
-- `GET /dietary-preferences` - Get dietary preferences
-- `PUT /dietary-preferences` - Update dietary preferences
+**📊 Personal Information (`/api/v1/personal`):**
+- `GET /` - Get complete personal information
+- `PUT /` - Update personal info (age, gender, weight, height, BMI)
 - `GET /fitness-profile` - Get complete fitness profile
-- `PUT /fitness-profile` - Update complete fitness profile
+- `PUT /fitness-profile` - Update fitness profile (goals, preferences, equipment)
 
 
-**🏋️ Custom Routines (`/api/v1/workouts/routines`):**
-- `GET /` - List user routines
-- `POST /` - Create new custom routine
-- `GET /:routineId` - Get routine details
-- `PUT /:routineId` - Update custom routine
-- `DELETE /:routineId` - Delete custom routine
-- `GET /templates` - Get routine templates
-- `POST /:routineId/duplicate` - Duplicate existing routine
-- `GET /search` - Search routines by criteria (goal, level, duration, equipment)
-- `POST /:routineId/share` - Share routine with other users
+**💪 Workouts (`/api/v1/workouts`):**
+- `GET /` - List user workouts with pagination and filters
+- `POST /` - Create new workout
+- `GET /:id` - Get workout details
+- `PUT /:id` - Update workout (owner only)
+- `DELETE /:id` - Delete workout (owner only)
 
 **👥 Social (`/api/v1/social`):**
-- `GET /feed` - User social feed
-- `GET /posts` - Posts by a specific user
-- `POST /posts` - Create post
-- `GET /posts/:postId` - Get post details
-- `PUT /posts/:postId` - Update post
-- `DELETE /posts/:postId` - Delete post
-- `POST /posts/:postId/like` - Like/unlike post
-- `GET /posts/:postId/comments` - Get post comments
-- `POST /posts/:postId/comments` - Comment on post
-- `POST /follow` - Follow user
-- `POST /unfollow` - Unfollow user
-- `GET /followers` - Get followers list
-- `GET /following` - Get following users list
+- `GET /posts` - List posts with pagination and filters
+- `POST /posts` - Create new post
+- `GET /posts/:id` - Get post details
+- `PUT /posts/:id` - Update post (author only)
+- `DELETE /posts/:id` - Delete post (author only)
+- `POST /posts/:id/like` - Like post (toggle operation)
+- `POST /posts/:id/unlike` - Unlike post
 
-**📱 Advanced Posts (`/api/v1/social/posts`):**
-- `GET /` - List posts with filters (type, date, user)
-- `POST /` - Create new post
-- `GET /:postId` - Get full post with interactions
-- `PUT /:postId` - Update post
-- `DELETE /:postId` - Delete post
-- `POST /:postId/share` - Share/forward post
-- `POST /:postId/repost` - Repost content
-- `GET /:postId/shares` - Get users who shared
-- `GET /:postId/likes` - Get users who liked
-- `GET /types` - Get available post types (achievement, routine, tip, progress)
-- `GET /trending` - Get trending posts
-- `GET /search` - Search posts by content or hashtags
-
-**🔐 Authentication (6 endpoints):**
+**🔐 Authentication (8 endpoints):**
 - `POST /api/v1/auth/register` - User registration
 - `POST /api/v1/auth/login` - Login
-- `POST /api/v1/auth/refresh` - Token refresh
-- `POST /api/v1/auth/logout` - Logout
 - `GET /api/v1/auth/me` - Current user profile
-- `POST /api/v1/auth/change-password` - Change password
+- `POST /api/v1/auth/logout` - Logout
+- `POST /api/v1/auth/refresh` - Token refresh
+- `POST /api/v1/auth/reset-password` - Reset password
+- `PUT /api/v1/auth/change-password/:id` - Change password
+- `DELETE /api/v1/auth/delete-account/:id` - Delete account (self-service, no service role key required)
 
-**👤 User Management (6 endpoints):**
-- `GET /api/v1/users/profile` - Get profile
-- `PUT /api/v1/users/profile` - Update profile
-- `GET /api/v1/users/settings` - Get settings
-- `PUT /api/v1/users/settings` - Update settings
-- `GET /api/v1/users/stats` - User stats
-- `GET /api/v1/users/{userId}/public` - Public profile
+**👤 User Management (5 endpoints):**
+- `GET /api/v1/users/profile` - Get authenticated user profile
+- `PUT /api/v1/users/profile` - Update authenticated user profile
+- `GET /api/v1/users/:id` - Get public user profile by ID
+- `GET /api/v1/users/search` - Search users by username or name
+- `GET /api/v1/users/stats` - Get authenticated user statistics
 
 **💪 Workouts (5 endpoints):**
-- `GET /api/v1/workouts` - List workouts
+- `GET /api/v1/workouts` - List workouts with pagination and filters
 - `POST /api/v1/workouts` - Create workout
-- `GET /api/v1/workouts/{workoutId}` - Workout details
-- `PUT /api/v1/workouts/{workoutId}` - Update workout
-- `DELETE /api/v1/workouts/{workoutId}` - Delete workout
+- `GET /api/v1/workouts/:id` - Get workout details
+- `PUT /api/v1/workouts/:id` - Update workout (owner only)
+- `DELETE /api/v1/workouts/:id` - Delete workout (owner only)
 
-**📱 Social Features (11 endpoints):**
-- `GET /api/v1/social/feed` - Social feed
-- `GET /api/v1/social/posts` - List posts
-- `POST /api/v1/social/posts` - Create post
-- `GET /api/v1/social/posts/{postId}` - Post details
-- `PUT /api/v1/social/posts/{postId}` - Update post
-- `DELETE /api/v1/social/posts/{postId}` - Delete post
-- `POST /api/v1/social/posts/{postId}/like` - Like post
-- `GET /api/v1/social/posts/{postId}/comments` - Comments
-- `POST /api/v1/social/posts/{postId}/comments` - Create comment
-- `POST /api/v1/social/follow/{userId}` - Follow user
-- `DELETE /api/v1/social/follow/{userId}` - Unfollow user
+**📱 Social Features (7 endpoints):**
+- `GET /api/v1/social/posts` - List posts with pagination and filters
+- `POST /api/v1/social/posts` - Create new post
+- `GET /api/v1/social/posts/:id` - Get post details
+- `PUT /api/v1/social/posts/:id` - Update post (author only)
+- `DELETE /api/v1/social/posts/:id` - Delete post (author only)
+- `POST /api/v1/social/posts/:id/like` - Like post (toggle)
+- `POST /api/v1/social/posts/:id/unlike` - Unlike post
 
-**👤 Personal Information (6 endpoints):**
-- `GET /api/v1/users/personal/info` - Personal information
-- `PUT /api/v1/users/personal/info` - Update personal information
-- `GET /api/v1/users/personal/objectives` - Fitness objectives
-- `PUT /api/v1/users/personal/objectives` - Update objectives
-- `GET /api/v1/users/personal/dietary-preferences` - Dietary preferences
-- `PUT /api/v1/users/personal/dietary-preferences` - Update dietary preferences
+**👤 Personal Information (4 endpoints):**
+- `GET /api/v1/personal` - Get personal information
+- `PUT /api/v1/personal` - Update personal information
+- `GET /api/v1/personal/fitness-profile` - Get fitness profile
+- `PUT /api/v1/personal/fitness-profile` - Update fitness profile
 
-**🏋️ Custom Routines (7 endpoints):**
-- `GET /api/v1/workouts/routines` - List routines
-- `POST /api/v1/workouts/routines` - Create routine
-- `GET /api/v1/workouts/routines/{routineId}` - Routine details
-- `PUT /api/v1/workouts/routines/{routineId}` - Update routine
-- `DELETE /api/v1/workouts/routines/{routineId}` - Delete routine
-- `POST /api/v1/workouts/routines/{routineId}/duplicate` - Duplicate routine
-- `POST /api/v1/workouts/routines/{routineId}/share` - Share routine
+**🏋️ Exercises (8 endpoints):**
+- `GET /api/v1/exercises/categories` - Get exercise categories
+- `GET /api/v1/exercises/muscle-groups` - Get muscle groups
+- `GET /api/v1/exercises/equipment` - Get equipment types
+- `GET /api/v1/exercises` - List exercises with filters
+- `POST /api/v1/exercises` - Create new exercise
+- `GET /api/v1/exercises/:id` - Get exercise details
+- `PUT /api/v1/exercises/:id` - Update exercise (creator only)
+- `DELETE /api/v1/exercises/:id` - Delete exercise (creator only)
 
-**📝 Advanced Posts (4 endpoints):**
-- `GET /api/v1/social/posts/trending` - Trending posts
-- `GET /api/v1/social/posts/search` - Search posts
-- `POST /api/v1/social/posts/{postId}/share` - Share post
-- `POST /api/v1/social/posts/{postId}/repost` - Repost
+**📊 Dashboard (3 endpoints):**
+- `GET /api/v1/dashboard` - Get dashboard overview
+- `GET /api/v1/dashboard/stats` - Get statistics by period
+- `GET /api/v1/dashboard/activity` - Get recent activity
 
-**📊 Dashboard (2 endpoints):**
-- `GET /api/v1/dashboard/stats` - Dashboard stats
-- `GET /api/v1/dashboard/activity` - Recent activity
-
-**⚙️ Settings (3 endpoints):**
-- `GET /api/v1/settings` - Get settings
+**⚙️ Settings (6 endpoints):**
+- `GET /api/v1/settings` - Get all settings
 - `PUT /api/v1/settings` - Update settings
-- `POST /api/v1/settings/reset` - Reset settings
+- `GET /api/v1/settings/notifications` - Get notification preferences
+- `PUT /api/v1/settings/notifications` - Update notification preferences
+- `GET /api/v1/settings/privacy` - Get privacy settings
+- `PUT /api/v1/settings/privacy` - Update privacy settings
 
-**📦 NPM Scripts:**
-- `npm run dev` - Development server with hot reload
-- `npm run build` - Production build
-- `npm run start` - Production server
-- `npm run test` - Run tests
-- `npm run test:watch` - Watch mode tests
-- `npm run test:coverage` - Test coverage
-- `npm run lint` - Linting with ESLint
-- `npm run lint:fix` - Linting with auto-fix
-- `npm run format` - Formatting with Prettier
-- `npm run docs:generate` - Generate basic OpenAPI docs
-- `npm run docs:generate-full` - Generate full OpenAPI documentation
-- `npm run docs:serve` - Serve interactive documentation
-- `npm run docs:open` - Open docs in browser
+**📦 PNPM Scripts:**
+- `pnpm run dev` - Development server with hot reload
+- `pnpm run build` - Production build
+- `pnpm run start` - Production server
+- `pnpm run test` - Run tests
+- `pnpm run test:watch` - Watch mode tests
+- `pnpm run test:coverage` - Test coverage
+- `pnpm run lint` - Linting with ESLint
+- `pnpm run lint:fix` - Linting with auto-fix (includes Prettier formatting via eslint-plugin-prettier)
+- `pnpm run docs:generate` - Generate OpenAPI documentation
+- `pnpm run docs:serve` - Serve interactive documentation
+- `pnpm run docs:open` - Open docs in browser
 
 **🚀 Technical Features:**
-- **OpenAPI loading:** From JSON file for better performance
-- **dotenv config:** Automatic environment variable loading
-- **Interactive docs:** Scalar API Reference at `/reference`
-- **Automatic validation:** Zod schemas for request/response
+- **OpenAPI Integration:** Automatic documentation from `@openapi` comments in routes
+- **Type-Safe Database Operations:** Helper functions with TypeScript generics (no `as any` casts)
+- **Structured Logging:** Pino for JSON structured logging
+- **Environment Variables:** Zod validation for type-safe configuration
+- **Centralized Routes:** All route constants in `src/core/routes.ts`
+- **Self-Service Account Deletion:** Database function allows users to delete accounts without service role key
+- **Modular Architecture:** Consistent module structure (routes, handlers, service, schemas, types)
 - **Strict TypeScript:** Strong typing throughout the project
 - **ES Modules:** Modern modules setup
-- **Error handling:** Consistent and professional
+- **Error handling:** Consistent and professional global error handler
 - **Rate limiting:** Protection against abuse
 - **Configured CORS:** For development and production
 
@@ -712,7 +682,7 @@ graph TB
 
 ### **1. User Personal Information**
 
-#### **GET /api/v1/users/personal/info**
+#### **GET /api/v1/personal**
 Get complete personal user information.
 
 **Response:**
@@ -732,7 +702,7 @@ Get complete personal user information.
 }
 ```
 
-#### **PUT /api/v1/users/personal/info**
+#### **PUT /api/v1/personal**
 Update personal user information.
 
 **Request Body:**
@@ -761,8 +731,8 @@ Update personal user information.
 }
 ```
 
-#### **GET /api/v1/users/personal/objectives**
-Get user fitness objectives and experience level.
+#### **GET /api/v1/personal/fitness-profile**
+Get user fitness profile including objectives, goals, and preferences.
 
 **Response:**
 ```json
@@ -781,8 +751,8 @@ Get user fitness objectives and experience level.
 }
 ```
 
-#### **PUT /api/v1/users/personal/objectives**
-Update objectives and experience level.
+#### **PUT /api/v1/personal/fitness-profile**
+Update fitness profile including objectives, goals, and preferences.
 
 **Request Body:**
 ```json
@@ -795,43 +765,6 @@ Update objectives and experience level.
   "available_equipment": ["full_gym", "dumbbells"],
   "fitness_goals_timeline": "6_months",
   "motivation_level": 8
-}
-```
-
-#### **GET /api/v1/users/personal/dietary-preferences**
-Get user dietary preferences.
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "dietary_restrictions": ["high_protein", "dairy_free"],
-    "allergies": ["nuts", "shellfish"],
-    "calorie_goal": 2500,
-    "protein_goal": 150,
-    "carb_goal": 300,
-    "fat_goal": 100,
-    "water_intake_goal": 3000,
-    "meal_frequency": 5
-  }
-}
-```
-
-#### **PUT /api/v1/users/personal/dietary-preferences**
-Update dietary preferences.
-
-**Request Body:**
-```json
-{
-  "dietary_restrictions": ["high_protein", "dairy_free"],
-  "allergies": ["nuts"],
-  "calorie_goal": 2500,
-  "protein_goal": 150,
-  "carb_goal": 300,
-  "fat_goal": 100,
-  "water_intake_goal": 3000,
-  "meal_frequency": 5
 }
 ```
 
@@ -1194,274 +1127,41 @@ graph TB
     AI --> TELEGRAM
 ```
 
-### Database Schema
-
-#### Main Tables
-
-```sql
--- users (managed by Supabase Auth)
-CREATE TABLE public.profiles (
-  id UUID REFERENCES auth.users(id) PRIMARY KEY,
-  username TEXT UNIQUE NOT NULL,
-  full_name TEXT,
-  avatar_url TEXT,
-  bio TEXT,
-  date_of_birth DATE,
-  gender TEXT CHECK (gender IN ('male', 'female', 'other', 'prefer_not_to_say')),
-  fitness_level TEXT CHECK (fitness_level IN ('beginner', 'intermediate', 'advanced', 'expert')),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Detailed personal information
-CREATE TABLE public.user_personal_info (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  age INTEGER CHECK (age >= 13 AND age <= 120),
-  weight_kg DECIMAL(5,2) CHECK (weight_kg > 0 AND weight_kg < 500),
-  height_cm INTEGER CHECK (height_cm > 0 AND height_cm < 300),
-  bmi DECIMAL(4,1) CHECK (bmi > 0 AND bmi < 100),
-  body_fat_percentage DECIMAL(4,1) CHECK (body_fat_percentage >= 0 AND body_fat_percentage <= 100),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(user_id)
-);
-
--- Fitness profile and goals
-CREATE TABLE public.user_fitness_profile (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  experience_level TEXT NOT NULL CHECK (experience_level IN ('beginner', 'intermediate', 'advanced', 'expert')),
-  primary_goal TEXT NOT NULL CHECK (primary_goal IN ('weight_loss', 'muscle_gain', 'maintain_fitness', 'improve_endurance', 'strength_building', 'flexibility', 'general_health')),
-  secondary_goals TEXT[] DEFAULT '{}',
-  workout_frequency INTEGER NOT NULL CHECK (workout_frequency >= 1 AND workout_frequency <= 7),
-  preferred_workout_duration INTEGER CHECK (preferred_workout_duration > 0 AND preferred_workout_duration <= 300),
-  available_equipment TEXT[] DEFAULT '{}' CHECK (available_equipment <@ ARRAY['full_gym', 'home_basic_weights', 'no_equipment', 'cardio_equipment', 'resistance_bands', 'dumbbells', 'barbell', 'kettlebell']),
-  workout_preferences JSONB DEFAULT '{}',
-  injury_history TEXT[] DEFAULT '{}',
-  medical_restrictions TEXT[] DEFAULT '{}',
-  fitness_goals_timeline TEXT CHECK (fitness_goals_timeline IN ('1_month', '3_months', '6_months', '1_year', 'long_term')),
-  motivation_level INTEGER CHECK (motivation_level >= 1 AND motivation_level <= 10),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(user_id)
-);
-
--- Dietary preferences
-CREATE TABLE public.user_dietary_preferences (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  dietary_restrictions TEXT[] DEFAULT '{}' CHECK (dietary_restrictions <@ ARRAY['high_protein', 'vegetarian', 'dairy_free', 'low_carb', 'vegan', 'gluten_free', 'keto', 'paleo', 'mediterranean', 'intermittent_fasting']),
-  allergies TEXT[] DEFAULT '{}',
-  food_preferences JSONB DEFAULT '{}',
-  calorie_goal INTEGER CHECK (calorie_goal > 0 AND calorie_goal < 10000),
-  protein_goal INTEGER CHECK (protein_goal >= 0 AND protein_goal < 500),
-  carb_goal INTEGER CHECK (carb_goal >= 0 AND carb_goal < 1000),
-  fat_goal INTEGER CHECK (fat_goal >= 0 AND fat_goal < 500),
-  water_intake_goal INTEGER CHECK (water_intake_goal > 0 AND water_intake_goal < 10000),
-  meal_frequency INTEGER CHECK (meal_frequency >= 1 AND meal_frequency <= 10),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(user_id)
-);
-
--- user_stats
-CREATE TABLE public.user_stats (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  height_cm DECIMAL(5,2),
-  weight_kg DECIMAL(5,2),
-  body_fat_percentage DECIMAL(4,2),
-  target_weight_kg DECIMAL(5,2),
-  recorded_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- exercises (exercise library)
-CREATE TABLE public.exercises (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  description TEXT,
-  muscle_group TEXT NOT NULL,
-  equipment TEXT[],
-  difficulty TEXT CHECK (difficulty IN ('beginner', 'intermediate', 'advanced')),
-  video_url TEXT,
-  image_url TEXT,
-  is_public BOOLEAN DEFAULT true,
-  created_by UUID REFERENCES profiles(id),
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- workouts
-CREATE TABLE public.workouts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  description TEXT,
-  type TEXT CHECK (type IN ('strength', 'cardio', 'flexibility', 'hiit', 'mixed', 'custom')),
-  difficulty TEXT CHECK (difficulty IN ('beginner', 'intermediate', 'advanced', 'expert')),
-  duration_minutes INTEGER CHECK (duration_minutes > 0 AND duration_minutes <= 300),
-  is_template BOOLEAN DEFAULT false,
-  is_public BOOLEAN DEFAULT false,
-  is_shared BOOLEAN DEFAULT false,
-  target_goal TEXT CHECK (target_goal IN ('weight_loss', 'muscle_gain', 'maintain_fitness', 'improve_endurance', 'strength_building', 'flexibility', 'general_health')),
-  target_level TEXT CHECK (target_level IN ('beginner', 'intermediate', 'advanced', 'expert')),
-  days_per_week INTEGER CHECK (days_per_week >= 1 AND days_per_week <= 7),
-  equipment_required TEXT[] DEFAULT '{}' CHECK (equipment_required <@ ARRAY['full_gym', 'home_basic_weights', 'no_equipment', 'cardio_equipment', 'resistance_bands', 'dumbbells', 'barbell', 'kettlebell']),
-  user_notes TEXT,
-  tags TEXT[] DEFAULT '{}',
-  share_count INTEGER DEFAULT 0,
-  like_count INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- shared_workouts
-CREATE TABLE public.shared_workouts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  original_workout_id UUID REFERENCES workouts(id) ON DELETE CASCADE,
-  shared_by_user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  shared_with_user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  shared_at TIMESTAMPTZ DEFAULT NOW(),
-  is_accepted BOOLEAN DEFAULT false,
-  accepted_at TIMESTAMPTZ,
-  UNIQUE(original_workout_id, shared_with_user_id)
-);
-
--- workout_exercises (M2M relationship)
-CREATE TABLE public.workout_exercises (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  workout_id UUID REFERENCES workouts(id) ON DELETE CASCADE,
-  exercise_id UUID REFERENCES exercises(id) ON DELETE CASCADE,
-  order_index INTEGER NOT NULL,
-  sets INTEGER,
-  reps INTEGER,
-  weight_kg DECIMAL(5,2),
-  rest_seconds INTEGER,
-  notes TEXT
-);
-
--- workout_sessions (completed sessions)
-CREATE TABLE public.workout_sessions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  workout_id UUID REFERENCES workouts(id) ON DELETE SET NULL,
-  started_at TIMESTAMPTZ NOT NULL,
-  completed_at TIMESTAMPTZ,
-  duration_minutes INTEGER,
-  calories_burned INTEGER,
-  notes TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Social features
-CREATE TABLE public.posts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  content TEXT NOT NULL,
-  post_type TEXT NOT NULL CHECK (post_type IN ('achievement', 'routine', 'tip', 'progress', 'motivation', 'question', 'general')),
-  workout_id UUID REFERENCES workouts(id) ON DELETE SET NULL,
-  image_urls TEXT[] DEFAULT '{}',
-  video_url TEXT,
-  hashtags TEXT[] DEFAULT '{}',
-  likes_count INTEGER DEFAULT 0,
-  comments_count INTEGER DEFAULT 0,
-  shares_count INTEGER DEFAULT 0,
-  reposts_count INTEGER DEFAULT 0,
-  is_public BOOLEAN DEFAULT true,
-  is_original BOOLEAN DEFAULT true, -- false if it's a repost
-  original_post_id UUID REFERENCES posts(id) ON DELETE SET NULL, -- for reposts
-  shared_from_user_id UUID REFERENCES profiles(id) ON DELETE SET NULL, -- user who originally shared
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- shared_posts
-CREATE TABLE public.post_shares (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
-  shared_by_user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  shared_with_user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  share_type TEXT CHECK (share_type IN ('share', 'repost', 'forward')),
-  shared_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(post_id, shared_by_user_id, shared_with_user_id)
-);
-
--- reposts
-CREATE TABLE public.post_reposts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  original_post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
-  reposted_by_user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  reposted_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(original_post_id, reposted_by_user_id)
-);
-
-CREATE TABLE public.follows (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  follower_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  following_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(follower_id, following_id),
-  CHECK (follower_id != following_id)
-);
-
-CREATE TABLE public.likes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(user_id, post_id)
-);
-
-CREATE TABLE public.comments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
-  content TEXT NOT NULL,
-  parent_comment_id UUID REFERENCES comments(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-#### Row Level Security (RLS)
-
-Implement security policies for each table:
-- Profiles: users can read public profiles, modify only their own
-- Workouts: read public + own workouts, modify only their own
-- Posts: read public, modify only their own
-
-#### Indexes and Optimization
-
-```sql
--- Critical indexes for performance
-CREATE INDEX idx_profiles_username ON profiles(username);
-CREATE INDEX idx_workouts_user_id ON workouts(user_id);
-CREATE INDEX idx_posts_user_id ON posts(user_id);
-CREATE INDEX idx_posts_created_at ON posts(created_at DESC);
-CREATE INDEX idx_follows_follower ON follows(follower_id);
-CREATE INDEX idx_follows_following ON follows(following_id);
-```
-
-#### Database Schema Diagrams
+#### Database Schema 
 
 ##### Main ER Diagram - Core Entities
 
 ```mermaid
 erDiagram
-    %% === MAIN ENTITIES ===
-    PROFILES {
-        uuid id PK "Reference to auth.users"
-        text username UK "Unique username"
-        text full_name "Full name"
-        text avatar_url "Avatar URL"
-        text bio "User biography"
-        date date_of_birth "Date of birth"
-        text gender "Gender (male/female/other/prefer_not_to_say)"
-        text fitness_level "Fitness level (beginner/intermediate/advanced/expert)"
-        timestamptz created_at "Creation date"
-        timestamptz updated_at "Last update date"
+    %% === AUTHENTICATION (Supabase Auth) ===
+    AUTH_USERS {
+        uuid id PK "Supabase Auth User ID"
+        text email "User Email"
+        timestamptz created_at "Account Creation"
+        timestamptz updated_at "Last Update"
+        timestamptz last_sign_in_at "Last Login"
+        boolean email_confirmed "Email Confirmed"
     }
-    
+
+    %% === MAIN USER PROFILES (Optimized - No Duplication) ===
+    PROFILES {
+        uuid id PK "References auth.users(id)"
+        text username UK "Unique Username"
+        text full_name "Full Display Name"
+        text avatar_url "Profile Picture URL"
+        text bio "User Biography"
+        date date_of_birth "Date of Birth"
+        text gender "Gender Preference"
+        text fitness_level "Fitness Level"
+        text timezone "User Timezone"
+        text language "Preferred Language"
+        boolean is_active "Account Status"
+        jsonb preferences "User Preferences"
+        jsonb social_links "Social Media Links"
+        timestamptz created_at "Profile Creation"
+        timestamptz updated_at "Last Update"
+    }
+
     %% === DETAILED PERSONAL INFORMATION ===
     USER_PERSONAL_INFO {
         uuid id PK "Unique ID"
@@ -1469,227 +1169,230 @@ erDiagram
         integer age "Age (13-120)"
         decimal weight_kg "Weight in kg"
         integer height_cm "Height in cm"
-        decimal bmi "Body Mass Index"
-        decimal body_fat_percentage "Body fat percentage"
-        timestamptz created_at "Creation date"
-        timestamptz updated_at "Last update date"
+        decimal bmi "Calculated BMI"
+        decimal body_fat_percentage "Body Fat %"
+        timestamptz created_at "Creation Date"
+        timestamptz updated_at "Last Update"
     }
-    
+
     USER_FITNESS_PROFILE {
         uuid id PK "Unique ID"
         uuid user_id FK "Reference to profiles"
-        text experience_level "Experience level"
-        text primary_goal "Primary fitness goal"
-        text[] secondary_goals "Secondary goals"
-        integer workout_frequency "Workout frequency (1-7 days)"
-        integer preferred_workout_duration "Preferred duration in minutes"
-        text[] available_equipment "Available equipment"
-        jsonb workout_preferences "Workout preferences"
-        text[] injury_history "Injury history"
-        text[] medical_restrictions "Medical restrictions"
-        text fitness_goals_timeline "Goals timeline"
-        integer motivation_level "Motivation level (1-10)"
-        timestamptz created_at "Creation date"
-        timestamptz updated_at "Last update date"
+        text experience_level "Experience Level"
+        text primary_goal "Primary Fitness Goal"
+        text[] secondary_goals "Secondary Goals"
+        integer workout_frequency "Days per Week"
+        integer preferred_workout_duration "Duration in Minutes"
+        text[] available_equipment "Available Equipment"
+        jsonb workout_preferences "Workout Preferences"
+        text[] injury_history "Injury History"
+        text[] medical_restrictions "Medical Restrictions"
+        text fitness_goals_timeline "Goals Timeline"
+        integer motivation_level "Motivation Level (1-10)"
+        timestamptz created_at "Creation Date"
+        timestamptz updated_at "Last Update"
     }
-    
+
     USER_DIETARY_PREFERENCES {
         uuid id PK "Unique ID"
         uuid user_id FK "Reference to profiles"
-        text[] dietary_restrictions "Dietary restrictions"
-        text[] allergies "Allergies"
-        text[] preferred_cuisines "Preferred cuisines"
-        text[] disliked_foods "Disliked foods"
-        integer daily_calorie_target "Daily calorie target"
-        decimal protein_target_percentage "Protein target (%)"
-        decimal carb_target_percentage "Carbohydrate target (%)"
-        decimal fat_target_percentage "Fat target (%)"
-        text meal_preferences "Meal preferences"
-        timestamptz created_at "Creation date"
-        timestamptz updated_at "Last update date"
+        text[] dietary_restrictions "Dietary Restrictions"
+        text[] allergies "Food Allergies"
+        text[] preferred_cuisines "Preferred Cuisines"
+        text[] disliked_foods "Disliked Foods"
+        integer daily_calorie_target "Daily Calorie Target"
+        decimal protein_target_percentage "Protein Target %"
+        decimal carb_target_percentage "Carb Target %"
+        decimal fat_target_percentage "Fat Target %"
+        text meal_preferences "Meal Preferences"
+        timestamptz created_at "Creation Date"
+        timestamptz updated_at "Last Update"
     }
-    
+
     USER_STATS {
         uuid id PK "Unique ID"
         uuid user_id FK "Reference to profiles"
         decimal height_cm "Height in cm"
         decimal weight_kg "Weight in kg"
-        decimal body_fat_percentage "Body fat percentage"
-        decimal target_weight_kg "Target weight in kg"
-        timestamptz recorded_at "Record date"
+        decimal body_fat_percentage "Body Fat %"
+        decimal target_weight_kg "Target Weight"
+        timestamptz recorded_at "Record Date"
     }
-    
+
     %% === EXERCISES AND WORKOUTS ===
     EXERCISES {
         uuid id PK "Unique ID"
-        text name "Exercise name"
-        text description "Detailed description"
-        text muscle_group "Primary muscle group"
-        text[] muscle_groups "Secondary muscle groups"
-        text[] equipment "Required equipment"
-        text difficulty "Difficulty level (beginner/intermediate/advanced/expert)"
-        text instructions "Execution instructions"
-        text video_url "Demo video URL"
+        text name "Exercise Name"
+        text description "Detailed Description"
+        text muscle_group "Primary Muscle Group"
+        text[] muscle_groups "Secondary Muscle Groups"
+        text[] equipment "Required Equipment"
+        text difficulty "Difficulty Level"
+        text instructions "Execution Instructions"
+        text video_url "Demo Video URL"
         text image_url "Image URL"
-        text[] tags "Exercise tags"
-        boolean is_public "Public visibility"
-        uuid created_by FK "Exercise creator"
-        timestamptz created_at "Creation date"
-        timestamptz updated_at "Last update date"
+        text[] tags "Exercise Tags"
+        boolean is_public "Public Visibility"
+        uuid created_by FK "Exercise Creator"
+        timestamptz created_at "Creation Date"
+        timestamptz updated_at "Last Update"
     }
-    
+
     WORKOUTS {
         uuid id PK "Unique ID"
         uuid user_id FK "Reference to profiles"
-        text name "Workout name"
-        text description "Workout description"
-        text type "Workout type"
-        text difficulty "Workout difficulty"
-        integer duration_minutes "Duration in minutes"
-        boolean is_template "Is template"
-        boolean is_public "Public visibility"
-        boolean is_shared "Is shared"
-        text target_goal "Workout target goal"
-        text target_level "Target level"
-        integer days_per_week "Days per week"
-        text[] equipment_required "Required equipment"
-        text user_notes "User notes"
-        text[] tags "Workout tags"
-        integer share_count "Share counter"
-        integer like_count "Like counter"
-        timestamptz created_at "Creation date"
-        timestamptz updated_at "Last update date"
+        text name "Workout Name"
+        text description "Workout Description"
+        text type "Workout Type"
+        text difficulty "Workout Difficulty"
+        integer duration_minutes "Duration in Minutes"
+        boolean is_template "Is Template"
+        boolean is_public "Public Visibility"
+        boolean is_shared "Is Shared"
+        text target_goal "Workout Target Goal"
+        text target_level "Target Level"
+        integer days_per_week "Days per Week"
+        text[] equipment_required "Required Equipment"
+        text user_notes "User Notes"
+        text[] tags "Workout Tags"
+        integer share_count "Share Counter"
+        integer like_count "Like Counter"
+        timestamptz created_at "Creation Date"
+        timestamptz updated_at "Last Update"
     }
-    
+
     SHARED_WORKOUTS {
         uuid id PK "Unique ID"
         uuid original_workout_id FK "Reference to original workout"
         uuid shared_by_user_id FK "User who shares"
         uuid shared_with_user_id FK "User who receives"
-        timestamptz shared_at "Share date"
-        boolean is_accepted "Accepted by recipient"
-        timestamptz accepted_at "Acceptance date"
+        timestamptz shared_at "Share Date"
+        boolean is_accepted "Accepted by Recipient"
+        timestamptz accepted_at "Acceptance Date"
     }
-    
+
     WORKOUT_EXERCISES {
         uuid id PK "Unique ID"
         uuid workout_id FK "Reference to workout"
         uuid exercise_id FK "Reference to exercise"
-        integer order_index "Order in workout"
-        integer sets "Number of sets"
-        integer reps "Number of repetitions"
+        integer order_index "Order in Workout"
+        integer sets "Number of Sets"
+        integer reps "Number of Repetitions"
         decimal weight_kg "Weight in kg"
-        integer rest_seconds "Rest in seconds"
-        text notes "Specific notes"
+        integer rest_seconds "Rest in Seconds"
+        text notes "Specific Notes"
     }
-    
+
     WORKOUT_SESSIONS {
         uuid id PK "Unique ID"
         uuid user_id FK "Reference to profiles"
         uuid workout_id FK "Reference to workout"
-        timestamptz started_at "Start time"
-        timestamptz completed_at "Completion time"
-        integer duration_minutes "Duration in minutes"
-        integer calories_burned "Calories burned"
-        text notes "Session notes"
-        timestamptz created_at "Creation date"
+        timestamptz started_at "Start Time"
+        timestamptz completed_at "Completion Time"
+        integer duration_minutes "Duration in Minutes"
+        integer calories_burned "Calories Burned"
+        text notes "Session Notes"
+        timestamptz created_at "Creation Date"
     }
-    
+
     %% === SOCIAL FEATURES ===
     POSTS {
         uuid id PK "Unique ID"
         uuid user_id FK "Reference to profiles"
-        text content "Post content"
-        text post_type "Post type (achievement/routine/tip/progress/motivation/question/general)"
+        text content "Post Content"
+        text post_type "Post Type"
         uuid workout_id FK "Reference to workout (optional)"
         text[] image_urls "Image URLs"
         text video_url "Video URL"
-        text[] hashtags "Post hashtags"
-        integer likes_count "Likes counter"
-        integer comments_count "Comments counter"
-        integer shares_count "Shares counter"
-        integer reposts_count "Reposts counter"
-        boolean is_public "Public visibility"
-        boolean is_original "Is original content"
+        text[] hashtags "Post Hashtags"
+        integer likes_count "Likes Counter"
+        integer comments_count "Comments Counter"
+        integer shares_count "Shares Counter"
+        integer reposts_count "Reposts Counter"
+        boolean is_public "Public Visibility"
+        boolean is_original "Is Original Content"
         uuid original_post_id FK "Reference to original post (reposts)"
         uuid shared_from_user_id FK "User who originally shared"
-        timestamptz created_at "Creation date"
-        timestamptz updated_at "Last update date"
+        timestamptz created_at "Creation Date"
+        timestamptz updated_at "Last Update"
     }
-    
+
     POST_LIKES {
         uuid id PK "Unique ID"
         uuid user_id FK "Reference to profiles"
         uuid post_id FK "Reference to post"
-        timestamptz created_at "Creation date"
+        timestamptz created_at "Creation Date"
     }
-    
+
     POST_COMMENTS {
         uuid id PK "Unique ID"
         uuid user_id FK "Reference to profiles"
         uuid post_id FK "Reference to post"
-        text content "Comment content"
+        text content "Comment Content"
         uuid parent_comment_id FK "Reference to parent comment (replies)"
-        timestamptz created_at "Creation date"
-        timestamptz updated_at "Last update date"
+        timestamptz created_at "Creation Date"
+        timestamptz updated_at "Last Update"
     }
-    
+
     POST_SHARES {
         uuid id PK "Unique ID"
         uuid post_id FK "Reference to post"
         uuid shared_by_user_id FK "User who shares"
         uuid shared_with_user_id FK "User who receives"
-        text share_type "Share type (share/repost/forward)"
-        timestamptz shared_at "Share date"
+        text share_type "Share Type"
+        timestamptz shared_at "Share Date"
     }
-    
+
     POST_REPOSTS {
         uuid id PK "Unique ID"
         uuid original_post_id FK "Reference to original post"
         uuid reposted_by_user_id FK "User who reposts"
-        timestamptz reposted_at "Repost date"
+        timestamptz reposted_at "Repost Date"
     }
-    
+
     %% === FOLLOW SYSTEM ===
     FOLLOWS {
         uuid id PK "Unique ID"
         uuid follower_id FK "User who follows"
         uuid following_id FK "User being followed"
-        timestamptz created_at "Follow date"
+        timestamptz created_at "Follow Date"
     }
-    
+
     %% === USER CONFIGURATION ===
     USER_SETTINGS {
         uuid id PK "Unique ID"
         uuid user_id FK "Reference to profiles"
-        boolean email_notifications "Email notifications"
-        boolean push_notifications "Push notifications"
-        boolean workout_reminders "Workout reminders"
+        boolean email_notifications "Email Notifications"
+        boolean push_notifications "Push Notifications"
+        boolean workout_reminders "Workout Reminders"
         text timezone "Timezone"
-        text language "Preferred language"
-        text theme "App theme"
-        boolean profile_visibility "Profile visibility"
-        boolean workout_visibility "Workout visibility"
-        boolean progress_visibility "Progress visibility"
-        timestamptz created_at "Creation date"
-        timestamptz updated_at "Last update date"
+        text language "Preferred Language"
+        text theme "App Theme"
+        boolean profile_visibility "Profile Visibility"
+        boolean workout_visibility "Workout Visibility"
+        boolean progress_visibility "Progress Visibility"
+        timestamptz created_at "Creation Date"
+        timestamptz updated_at "Last Update"
     }
-    
+
     %% === MAIN RELATIONSHIPS ===
-    %% User and personal information
+    %% Authentication and Profiles
+    AUTH_USERS ||--|| PROFILES : "authenticates"
+
+    %% User and Personal Information
     PROFILES ||--o{ USER_PERSONAL_INFO : "has"
     PROFILES ||--o{ USER_FITNESS_PROFILE : "has"
     PROFILES ||--o{ USER_DIETARY_PREFERENCES : "has"
     PROFILES ||--o{ USER_STATS : "records"
-    PROFILES ||--o{ USER_SETTINGS : "configures"
-    
-    %% User and content
+    PROFILES ||--|| USER_SETTINGS : "configures"
+
+    %% User and Content
     PROFILES ||--o{ EXERCISES : "creates"
     PROFILES ||--o{ WORKOUTS : "creates"
     PROFILES ||--o{ POSTS : "publishes"
     PROFILES ||--o{ WORKOUT_SESSIONS : "performs"
-    
-    %% Social system
+
+    %% Social System
     PROFILES ||--o{ FOLLOWS : "follows"
     PROFILES ||--o{ FOLLOWS : "followed_by"
     PROFILES ||--o{ POST_LIKES : "likes"
@@ -1698,27 +1401,27 @@ erDiagram
     PROFILES ||--o{ POST_REPOSTS : "reposts"
     PROFILES ||--o{ SHARED_WORKOUTS : "shares_workout"
     PROFILES ||--o{ SHARED_WORKOUTS : "receives_workout"
-    
-    %% Workouts and exercises
+
+    %% Workouts and Exercises
     WORKOUTS ||--o{ WORKOUT_EXERCISES : "contains"
     EXERCISES ||--o{ WORKOUT_EXERCISES : "included_in"
     WORKOUTS ||--o{ WORKOUT_SESSIONS : "executed_as"
     WORKOUTS ||--o{ SHARED_WORKOUTS : "shared_as"
     WORKOUTS ||--o{ POSTS : "featured_in"
-    
-    %% Posts and interactions
+
+    %% Posts and Interactions
     POSTS ||--o{ POST_LIKES : "receives_likes"
     POSTS ||--o{ POST_COMMENTS : "has_comments"
     POSTS ||--o{ POST_SHARES : "is_shared"
     POSTS ||--o{ POST_REPOSTS : "is_reposted"
     POST_COMMENTS ||--o{ POST_COMMENTS : "replies_to"
-    
-    %% Sharing relationships
+
+    %% Sharing Relationships
     POSTS ||--o{ POST_SHARES : "shared_via"
     POSTS ||--o{ POST_REPOSTS : "reposted_as"
 ```
 
-# Principal ER Diagram (Simplified)
+##### Main ER Diagram (Simplified)
 
 ```mermaid
 erDiagram
@@ -2144,14 +1847,16 @@ graph TB
   end
 
   subgraph Backend ["Backend: Node + Hono"]
-    API["REST API"]
-    WS["WebSocket"]
-    SVC_USER["User / Profile Service"]
+    API["REST API<br/>(50 endpoints)"]
+    MIDDLEWARE["Middleware<br/>(auth, error, logging,<br/>validation, rate-limit)"]
+    SVC_AUTH["Auth Service"]
+    SVC_USER["User Service"]
     SVC_WORKOUT["Workout Service"]
-    SVC_NUTR["Nutrition Service"]
+    SVC_EXERCISE["Exercise Service"]
     SVC_SOCIAL["Social Service"]
-    SVC_CHAT["Chat Orchestrator"]
-    SVC_REC["Recommendation Proxy"]
+    SVC_DASHBOARD["Dashboard Service"]
+    SVC_PERSONAL["Personal Service"]
+    SVC_SETTINGS["Settings Service"]
   end
 
   subgraph Plataforma ["Plataforma"]
@@ -2166,15 +1871,21 @@ graph TB
   UI --> FEAPI
   FEAPI --> API
   FEAuth --> API
-
-  API --> SVC_USER --> SUPA
-  API --> SVC_WORKOUT --> SUPA
-  API --> SVC_NUTR --> SUPA
-  API --> SVC_SOCIAL --> SUPA
-  API --> SVC_CHAT --> N8N
-  API --> SVC_REC --> DIFY
-  N8N --> MAIL
-  N8N --> TELEGRAM
+  
+  API --> MIDDLEWARE
+  MIDDLEWARE --> SVC_AUTH --> SUPA
+  MIDDLEWARE --> SVC_USER --> SUPA
+  MIDDLEWARE --> SVC_WORKOUT --> SUPA
+  MIDDLEWARE --> SVC_EXERCISE --> SUPA
+  MIDDLEWARE --> SVC_SOCIAL --> SUPA
+  MIDDLEWARE --> SVC_DASHBOARD --> SUPA
+  MIDDLEWARE --> SVC_PERSONAL --> SUPA
+  MIDDLEWARE --> SVC_SETTINGS --> SUPA
+  
+  API -. future .-> N8N
+  API -. future .-> DIFY
+  N8N -. future .-> MAIL
+  N8N -. future .-> TELEGRAM
 ```
 
 ```mermaid
@@ -2187,18 +1898,22 @@ graph TB
         end
         
         subgraph "API Layer"
-            D[Hono API Gateway<br/>31 Endpoints]
-            E[Authentication<br/>JWT + RLS]
-            F[Rate Limiting<br/>100 req/min]
+            D[Hono API Gateway<br/>50 Endpoints]
+            E[Authentication<br/>JWT + Supabase Auth]
+            F[Rate Limiting<br/>Request Throttling]
             G[Validation<br/>Zod Schemas]
+            MW[Middleware Stack<br/>auth, error, logging, validation]
         end
         
-        subgraph "Business Logic"
-            H[User Management<br/>9 Handlers]
-            I[Workout System<br/>Routines + Exercises]
-            J[Social Features<br/>Posts + Interactions]
-            K[AI Integration<br/>Dify Platform]
-            L[Analytics<br/>Dashboard + Stats]
+        subgraph "Business Logic (8 Modules)"
+            H_AUTH[Auth Service<br/>Register, login, delete]
+            H_USER[User Service<br/>Profile, search, stats]
+            H_WORKOUT[Workout Service<br/>CRUD operations]
+            H_EXERCISE[Exercise Service<br/>Catalog management]
+            H_SOCIAL[Social Service<br/>Posts, likes, interactions]
+            H_DASHBOARD[Dashboard Service<br/>Analytics + stats]
+            H_PERSONAL[Personal Service<br/>Info + fitness profile]
+            H_SETTINGS[Settings Service<br/>Preferences + privacy]
         end
         
         subgraph "Data Layer"
@@ -2221,28 +1936,37 @@ graph TB
     B --> D
     C --> D
     
-    D --> E
-    E --> F
-    F --> G
-    G --> H
-    G --> I
-    G --> J
-    G --> K
-    G --> L
+    D --> MW
+    MW --> E
+    MW --> F
+    MW --> G
     
-    H --> M
-    I --> M
-    J --> M
-    K --> Q
-    L --> M
+    MW --> H_AUTH
+    MW --> H_USER
+    MW --> H_WORKOUT
+    MW --> H_EXERCISE
+    MW --> H_SOCIAL
+    MW --> H_DASHBOARD
+    MW --> H_PERSONAL
+    MW --> H_SETTINGS
     
-    H --> N
-    I --> O
-    J --> P
+    H_AUTH --> M
+    H_USER --> M
+    H_WORKOUT --> M
+    H_EXERCISE --> M
+    H_SOCIAL --> M
+    H_DASHBOARD --> M
+    H_PERSONAL --> M
+    H_SETTINGS --> M
     
-    D --> R
-    D --> S
-    D --> T
+    H_AUTH --> N
+    H_USER --> N
+    H_SOCIAL --> O
+    
+    D -. future .-> Q
+    D -. future .-> R
+    D -. future .-> S
+    D -. future .-> T
     
     %% Styling
     classDef frontend fill:#e1f5fe
@@ -2252,8 +1976,8 @@ graph TB
     classDef external fill:#fce4ec
     
     class A,B,C frontend
-    class D,E,F,G api
-    class H,I,J,K,L business
+    class D,E,F,G,MW api
+    class H_AUTH,H_USER,H_WORKOUT,H_EXERCISE,H_SOCIAL,H_DASHBOARD,H_PERSONAL,H_SETTINGS business
     class M,N,O,P data
     class Q,R,S,T external
 ```
@@ -2477,16 +2201,26 @@ sequenceDiagram
 ### API Request Lifecycle
 ```mermaid
 graph TB
-  REQ[HTTP Request] --> EDGE[Ingress/NGINX]
-  EDGE --> GATE[API Gateway]
-  GATE --> AUTHZ[AuthZ + RateLimit]
-  AUTHZ --> HANDLER[Route Handler]
-  HANDLER --> SERVICE[Domain Service]
-  SERVICE --> DB[(Postgres)]
-  SERVICE --> EXT[Ext: Dify/n8n]
-  DB --> SERVICE
-  SERVICE --> RESP[Response DTO]
-  RESP --> GATE --> EDGE --> RES[HTTP Response]
+  REQ[HTTP Request] --> SERVER["server.ts<br/>(Entry Point)"]
+  SERVER --> APP["app.ts<br/>(Hono App)"]
+  APP --> LOGGING["logging.ts<br/>(Pino Request Logging)"]
+  LOGGING --> CORS["CORS Middleware"]
+  CORS --> RATE_LIMIT["rate-limit.ts<br/>(Rate Limiting)"]
+  RATE_LIMIT --> ROUTES["Routes Module<br/>(auth, users, workouts, etc.)"]
+  ROUTES --> VALIDATION["validation.ts<br/>(Zod Schema Validation)"]
+  VALIDATION --> AUTH_MW["auth.ts<br/>(JWT Authentication)"]
+  AUTH_MW --> HANDLER["handler.ts<br/>(Request Handler)"]
+  HANDLER --> SERVICE["service.ts<br/>(Business Logic)"]
+  SERVICE --> DB_HELPERS["database-helpers.ts<br/>(Type-safe Operations)"]
+  DB_HELPERS --> SUPA["Supabase Client"]
+  SUPA --> POSTGRES[("PostgreSQL<br/>(Supabase)")]
+  POSTGRES --> SUPA
+  SUPA --> DB_HELPERS
+  DB_HELPERS --> SERVICE
+  SERVICE --> HANDLER
+  HANDLER --> RESPONSE["response.ts<br/>(Standardized Response)"]
+  RESPONSE --> ERROR_HANDLER["error.ts<br/>(Global Error Handler)"]
+  ERROR_HANDLER --> RES[HTTP Response]
 ```
 
 ### Session Lifecycle (tokens)
@@ -2510,51 +2244,67 @@ sequenceDiagram
 ### Backend Architecture (Layers)
 ```mermaid
 graph TB
-  subgraph API_Layer
-    HONO[Hono Controllers]
-    MIDDLE["Middleware: auth, rate limit, validation"]
+  subgraph HTTP_Layer["HTTP Layer (Hono)"]
+    ROUTES["Routes<br/>(8 modules: auth, users, workouts,<br/>exercises, social, dashboard,<br/>personal, settings)"]
+    HANDLERS["Handlers<br/>(Request/Response)"]
+    MIDDLEWARE["Middleware<br/>(auth, error, logging,<br/>validation, rate-limit)"]
+    PLUGINS["Plugins<br/>(health, openapi)"]
   end
-  subgraph Application_Layer
-    USER_SVC[UserService]
-    WORKOUT_SVC[WorkoutService]
-    DIET_SVC[DietService]
-    SOCIAL_SVC[SocialService]
-    AI_SVC[AI Orchestrator]
+  
+  subgraph Service_Layer["Service Layer (Business Logic)"]
+    AUTH_SVC["authService"]
+    USER_SVC["userService"]
+    WORKOUT_SVC["workoutService"]
+    EXERCISE_SVC["exerciseService"]
+    SOCIAL_SVC["socialService"]
+    DASHBOARD_SVC["dashboardService"]
+    PERSONAL_SVC["personalService"]
+    SETTINGS_SVC["settingsService"]
   end
-  subgraph Domain_Layer
-    ENTITIES["Entities / Value Objects"]
-    RULES[Domain Rules]
+  
+  subgraph Core_Layer["Core Layer (Infrastructure)"]
+    DB_HELPERS["database-helpers.ts<br/>(Type-safe operations)"]
+    CONFIG["config/<br/>(database, env, logger)"]
+    UTILS["utils/<br/>(response, errors, auth)"]
+    ROUTE_CONST["routes.ts<br/>(Centralized routes)"]
+    TYPES["types/<br/>(database.types.ts)"]
   end
-  subgraph Infrastructure_Layer
-    REPOS["Repositories (Supabase/Postgres)"]
-    CACHE["Redis (optional)"]
-    MQ["Event Bus (optional)"]
+  
+  subgraph Data_Layer["Data Layer (Supabase)"]
+    SUPA_CLIENT["Supabase Client"]
+    DB_FUNCTIONS["Database Functions<br/>(delete_own_account, etc.)"]
+    MIGRATIONS["Migrations<br/>(001-004)"]
   end
-  subgraph External_Services
-    SUPA[Supabase]
-    DIFY[Dify AI]
-    N8N[n8n]
-    SMTP["Proton Mail / SMTP"]
+  
+  subgraph External_Services["External Services"]
+    SUPA_AUTH["Supabase Auth"]
+    SUPA_STORAGE["Supabase Storage"]
+    DIFY["Dify AI (Future)"]
+    N8N["n8n (Future)"]
+    SMTP["Email Service"]
   end
 
-  HONO --> MIDDLE
-  MIDDLE --> USER_SVC
-  MIDDLE --> WORKOUT_SVC
-  MIDDLE --> DIET_SVC
-  MIDDLE --> SOCIAL_SVC
-  MIDDLE --> AI_SVC
-  USER_SVC --> ENTITIES
-  WORKOUT_SVC --> ENTITIES
-  DIET_SVC --> ENTITIES
-  SOCIAL_SVC --> ENTITIES
-  ENTITIES --> RULES
-  ENTITIES --> REPOS
-  REPOS --> SUPA
-  CACHE -. optional .-> REPOS
-  AI_SVC --> DIFY
-  SOCIAL_SVC --> MQ
-  MQ --> N8N
-  SOCIAL_SVC --> SMTP
+  ROUTES --> HANDLERS
+  HANDLERS --> MIDDLEWARE
+  HANDLERS --> PLUGINS
+  HANDLERS --> SERVICE_LAYER
+  
+  SERVICE_LAYER --> DB_HELPERS
+  SERVICE_LAYER --> CONFIG
+  SERVICE_LAYER --> UTILS
+  SERVICE_LAYER --> TYPES
+  
+  DB_HELPERS --> SUPA_CLIENT
+  CONFIG --> SUPA_CLIENT
+  SUPA_CLIENT --> DATA_LAYER
+  
+  DB_FUNCTIONS --> SUPA_AUTH
+  SUPA_CLIENT --> SUPA_AUTH
+  SUPA_CLIENT --> SUPA_STORAGE
+  
+  SERVICE_LAYER -. future .-> DIFY
+  SERVICE_LAYER -. future .-> N8N
+  SERVICE_LAYER --> SMTP
 ```
 
 ### Detailed Service Communication Flow (with queues)
@@ -3073,7 +2823,7 @@ export interface Comment {
 
 ### Domain Models (TypeScript)
 ```typescript
-// backend/src/domain/user/User.ts
+// src/modules/users/types.ts
 export type Gender = 'male' | 'female' | 'other';
 
 export interface BodyMetrics {
@@ -3101,7 +2851,7 @@ export interface UserProfile {
   updatedAt: string;
 }
 
-// backend/src/domain/workout/Workout.ts
+// src/modules/workouts/types.ts
 export interface Exercise {
   id: string;
   name: string;
@@ -3131,7 +2881,8 @@ export interface WorkoutPlan {
   updatedAt: string;
 }
 
-// backend/src/domain/nutrition/Diet.ts
+// Note: Nutrition module not yet implemented
+// Future: src/modules/nutrition/types.ts
 export interface FoodItem {
   id: string;
   name: string;
@@ -3158,86 +2909,125 @@ export interface DietPlan {
 }
 ```
 
-### Repositories (Supabase/Postgres)
+### Database Operations (Type-Safe Helpers)
 ```typescript
-// backend/src/infrastructure/repos/UserRepository.ts
-import { createClient } from '@supabase/supabase-js';
-import type { UserProfile } from '../../domain/user/User';
+// src/core/config/database-helpers.ts
+import type { Database, TableInsert, TableUpdate } from '../types/index.js';
+import { supabase } from './database.js';
 
-export class UserRepository {
-  constructor(private supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_KEY!)) {}
+/**
+ * Type-safe insert helper using database-helpers
+ * Avoids 'as never' casts by using controlled type assertions
+ */
+export async function insertRow<T extends keyof Database['public']['Tables']>(
+  tableName: T,
+  data: TableInsert<T>
+) {
+  const insertValue = data as Database['public']['Tables'][T]['Insert'] & Record<string, unknown>;
+  return supabase.from(tableName).insert(insertValue as any).select().single();
+}
 
-  async findById(id: string): Promise<UserProfile | null> {
-    const { data, error } = await this.supabase.from('users').select('*').eq('id', id).maybeSingle();
-    if (error) throw error;
-    return data as unknown as UserProfile | null;
-  }
-
-  async upsert(profile: UserProfile): Promise<UserProfile> {
-    const { data, error } = await this.supabase.from('users').upsert(profile).select('*').single();
-    if (error) throw error;
-    return data as unknown as UserProfile;
-  }
+/**
+ * Type-safe select helper
+ */
+export async function selectRow<T extends keyof Database['public']['Tables']>(
+  tableName: T,
+  filter: (builder: any) => any
+) {
+  return filter(supabase.from(tableName)).select().single();
 }
 ```
 
-### Services (Bussiness)
+### Services (Business Logic)
 ```typescript
-// backend/src/application/UserService.ts
-import type { UserProfile } from '../domain/user/User';
-import { UserRepository } from '../infrastructure/repos/UserRepository';
+// src/modules/users/service.ts
+import { selectRow } from '../../core/config/database-helpers.js';
+import type { UserProfile } from './types.js';
 
-export class UserService {
-  constructor(private users = new UserRepository()) {}
-
-  async getUserSummary(id: string) {
-    const user = await this.users.findById(id);
-    if (!user) throw new Error('USER_NOT_FOUND');
-    const bmi = user.metrics.bmi ?? (user.metrics.weightKg / Math.pow(user.metrics.heightCm / 100, 2));
-    return { id: user.id, displayName: user.displayName, objective: user.goals.objective, bmi };
+export const userService = {
+  async getProfile(userId: string): Promise<UserProfile | null> {
+    const { data, error } = await selectRow('profiles', (q) => 
+      q.eq('id', userId)
+    );
+    
+    if (error) throw new Error(error.message);
+    if (!data) return null;
+    
+    return mapProfileRowToUserProfile(data);
+  },
+  
+  async getById(id: string): Promise<UserProfile | null> {
+    // Similar implementation using selectRow helper
+    const { data, error } = await selectRow('profiles', (q) => 
+      q.eq('id', id)
+    );
+    
+    if (error) throw new Error(error.message);
+    return data ? mapProfileRowToUserProfile(data) : null;
   }
-}
+};
 
-// backend/src/application/WorkoutService.ts
-import type { WorkoutPlan } from '../domain/workout/Workout';
-export class WorkoutService {
-  async generatePlanForUser(userId: string, weeks: number): Promise<WorkoutPlan> {
-    const schedule = Array.from({ length: 3 }).map((_, i) => ({ dayOfWeek: (i + 1) as 1|2|3|4|5|6|7, sets: [] }));
-    return { id: crypto.randomUUID(), userId, name: 'Starter Plan', weeks, schedule, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+// src/modules/workouts/service.ts
+import { insertRow, selectRow } from '../../core/config/database-helpers.js';
+import type { CreateWorkoutData, Workout } from './types.js';
+
+export const workoutService = {
+  async create(userId: string, data: CreateWorkoutData): Promise<Workout> {
+    const { data: workout, error } = await insertRow('workouts', {
+      user_id: userId,
+      name: data.name,
+      description: data.description,
+      // ... other fields
+    });
+    
+    if (error) throw new Error(error.message);
+    return mapWorkoutRowToWorkout(workout);
   }
-}
+};
 ```
 
-### Controllers (Hono)
+### Routes and Handlers (Hono)
 ```typescript
-// backend/src/interfaces/http/routes.ts
+// src/modules/workouts/routes.ts
 import { Hono } from 'hono';
-import { z } from 'zod';
-import { UserService } from '../../application/UserService';
-import { WorkoutService } from '../../application/WorkoutService';
+import { auth } from '../../middleware/auth.js';
+import { validate } from '../../middleware/validation.js';
+import { workoutHandlers } from './handlers.js';
+import { workoutSchemas } from './schemas.js';
+import { WORKOUT_ROUTES } from '../../core/routes.js';
 
-const api = new Hono();
-const userService = new UserService();
-const workoutService = new WorkoutService();
+const workoutRoutes = new Hono();
+workoutRoutes.use('*', auth);
 
-const CreateWorkoutSchema = z.object({ userId: z.string().uuid(), weeks: z.number().int().min(1).max(12) });
+/**
+ * @openapi
+ * /api/v1/workouts:
+ *   post:
+ *     tags: [Workouts]
+ *     summary: Create workout
+ */
+workoutRoutes.post(
+  WORKOUT_ROUTES.CREATE,
+  validate(workoutSchemas.create, 'body'),
+  workoutHandlers.create
+);
 
-api.get('/auth/me', c => c.json({ user: c.get('user') }));
+// src/modules/workouts/handlers.ts
+import { Context } from 'hono';
+import { workoutService } from './service.js';
+import { sendCreated } from '../../core/utils/response.js';
 
-api.get('/users/:id/summary', async c => {
-  const id = c.req.param('id');
-  return c.json(await userService.getUserSummary(id));
-});
-
-api.post('/workouts', async c => {
-  const body = await c.req.json();
-  const input = CreateWorkoutSchema.parse(body);
-  const plan = await workoutService.generatePlanForUser(input.userId, input.weeks);
-  return c.json(plan, 201);
-});
-
-export default api;
+export const workoutHandlers = {
+  async create(c: Context) {
+    const user = c.get('user');
+    const data = c.get('validated') as CreateWorkoutData;
+    
+    const workout = await workoutService.create(user.id, data);
+    return sendCreated(c, workout);
+  }
+};
 ```
+
 
 ### AI Orchestration (n8n/Dify)
 ```mermaid
@@ -3437,16 +3227,46 @@ export const emailTemplates = {
 };
 ```
 
-### Controllers (src/handler/)
+### Module Structure (src/modules/)
 
-#### auth.handler.ts - Authentication Controllers
+Each module follows a consistent pattern with routes, handlers, service, schemas, and types:
+
+#### auth module - Authentication
+
+**routes.ts** - Route definitions with OpenAPI documentation:
 ```typescript
-// src/handler/auth.handler.ts
+// src/modules/auth/routes.ts
+import { Hono } from 'hono';
+import { authHandlers } from './handlers.js';
+import { auth } from '../../middleware/auth.js';
+import { validate } from '../../middleware/validation.js';
+import { authSchemas } from './schemas.js';
+import { AUTH_ROUTES, BASE_ROUTES } from '../../core/routes.js';
+
+const authRoutes = new Hono();
+
+authRoutes.post(
+  AUTH_ROUTES.REGISTER,
+  validate(authSchemas.register, 'body'),
+  authHandlers.register
+);
+
+authRoutes.post(
+  AUTH_ROUTES.LOGIN,
+  validate(authSchemas.login, 'body'),
+  authHandlers.login
+);
+
+export default authRoutes;
+```
+
+**handlers.ts** - HTTP request handlers:
+```typescript
+// src/modules/auth/handlers.ts
 import { Context } from 'hono';
-import { supabase, supabaseAdmin } from '../../lib/db';
-import { sendEmail, emailTemplates } from '../../lib/mailer';
-import { AuthSchemas } from '../../doc/schemas';
-import { z } from 'zod';
+import { authService } from './service.js';
+import { sendSuccess, sendCreated, sendError } from '../../core/utils/response.js';
+import { logger } from '../../core/config/logger.js';
 
 export async function register(c: Context) {
   try {
@@ -3644,44 +3464,61 @@ export async function updateProfile(c: Context) {
 }
 ```
 
-### Routes (src/routes/)
+### Service Layer (src/modules/*/service.ts)
 
-#### auth.routes.ts - Authentication Routes
+**service.ts** - Business logic layer:
 ```typescript
-// src/routes/auth.routes.ts
-import { Hono } from 'hono';
-import { register, login, getProfile } from '../handler/auth.handler';
-import { authMiddleware } from '../middleware/auth';
+// src/modules/auth/service.ts
+import { supabase } from '../../core/config/database.js';
+import { insertRow } from '../../core/config/database-helpers.js';
+import type { RegisterData, LoginData } from './types.js';
 
-const authRoutes = new Hono();
-
-// Public routes
-authRoutes.post('/register', register);
-authRoutes.post('/login', login);
-
-// Protected routes
-authRoutes.get('/me', authMiddleware, getProfile);
-
-export { authRoutes };
+export const authService = {
+  async register(data: RegisterData) {
+    // 1. Create user in Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+    });
+    
+    if (authError) throw new Error(authError.message);
+    
+    // 2. Create profile using type-safe helper
+    const { data: profile, error: profileError } = await insertRow(
+      'profiles',
+      {
+        id: authData.user!.id,
+        username: data.username,
+        full_name: data.full_name,
+        fitness_level: 'beginner',
+      }
+    );
+    
+    if (profileError) throw new Error(profileError.message);
+    
+    return { user: authData.user, profile };
+  },
+  
+  async login(data: LoginData) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    });
+    
+    if (error) throw new Error('Invalid credentials');
+    
+    return { user: data.user, session: data.session };
+  },
+  
+  async deleteAccount(userId: string) {
+    // Uses database function - no service role key required
+    const { error } = await supabase.rpc('delete_own_account');
+    if (error) throw new Error(error.message);
+  }
+};
 ```
 
-#### user.routes.ts - User Routes
-```typescript
-// src/routes/user.routes.ts
-import { Hono } from 'hono';
-import { getUserProfile, updateProfile } from '../handler/user.handler';
-import { authMiddleware } from '../middleware/auth';
-
-const userRoutes = new Hono();
-
-// Public routes
-userRoutes.get('/:id', getUserProfile);
-
-// Protected routes
-userRoutes.put('/:id', authMiddleware, updateProfile);
-
-export { userRoutes };
-```
+**Note**: Account deletion uses a database function (`delete_own_account`) with `SECURITY DEFINER`, allowing users to delete their own accounts without requiring the service role key in application code.
 ---
 
 ### AI and Recommendations
@@ -3933,51 +3770,44 @@ describe('ChatInterface', () => {
 ```
 
 ```typescript
-// backend/src/modules/workouts/__tests__/workouts.service.test.ts
-import { WorkoutService } from '../workouts.service';
-import { WorkoutRepository } from '../workouts.repository';
+// src/modules/workouts/__tests__/workouts.service.test.ts
+import { workoutService } from '../service.js';
+import * as dbHelpers from '../../../core/config/database-helpers.js';
 
-jest.mock('../workouts.repository');
-const mockRepository = WorkoutRepository as jest.MockedClass<typeof WorkoutRepository>;
+// Mock database helpers
+jest.mock('../../../core/config/database-helpers.js');
 
-describe('WorkoutService', () => {
-  let service: WorkoutService;
-  let mockRepo: jest.Mocked<WorkoutRepository>;
-
-  beforeEach(() => {
-    mockRepo = new mockRepository() as jest.Mocked<WorkoutRepository>;
-    service = new WorkoutService();
-    (service as any).repo = mockRepo;
-  });
-
-  describe('createWorkout', () => {
-    it('should create workout with correct progress calculation', async () => {
+describe('workoutService', () => {
+  describe('create', () => {
+    it('should create workout using type-safe database helpers', async () => {
       const workoutData = {
         name: 'Test Workout',
+        description: 'Test description',
         difficulty: 'beginner' as const,
-        plan: {
-          weeks: 4,
-          daysPerWeek: 3,
-          sessions: []
-        },
-        isPublic: false
       };
 
-      const expectedWorkout = {
+      const mockWorkout = {
+        id: 'workout-123',
+        user_id: 'user-123',
         ...workoutData,
-        userId: 'user-123',
-        progress: {
-          completedSessions: 0,
-          totalSessions: 12 // 4 weeks * 3 days
-        }
+        created_at: new Date().toISOString(),
       };
 
-      mockRepo.create.mockResolvedValue(expectedWorkout as any);
+      (dbHelpers.insertRow as jest.Mock).mockResolvedValue({
+        data: mockWorkout,
+        error: null,
+      });
 
-      const result = await service.createWorkout('user-123', workoutData);
+      const result = await workoutService.create('user-123', workoutData);
 
-      expect(mockRepo.create).toHaveBeenCalledWith(expectedWorkout);
-      expect(result).toEqual(expectedWorkout);
+      expect(dbHelpers.insertRow).toHaveBeenCalledWith(
+        'workouts',
+        expect.objectContaining({
+          user_id: 'user-123',
+          name: workoutData.name,
+        })
+      );
+      expect(result).toBeDefined();
     });
   });
 });
@@ -3987,10 +3817,12 @@ describe('WorkoutService', () => {
 
 ## 5. AI Integration (Detailed)
 
-### Dify Client
+### Dify Client (Future Implementation)
+
+**Note:** AI integration with Dify is planned but not yet implemented. The following is a conceptual example.
 
 ```typescript
-// backend/src/modules/ai/dify.client.ts
+// Future: src/modules/ai/dify.client.ts (planned)
 export class DifyClient {
   private apiKey: string;
   private baseUrl = 'https://api.dify.ai/v1';
@@ -4054,46 +3886,37 @@ export class DifyClient {
 }
 ```
 
-### Context Builder
+### Context Builder (Future Implementation)
+
+**Note:** AI context building is planned but not yet implemented.
 
 ```typescript
-// backend/src/modules/ai/context.builder.ts
-import { createClient } from '@supabase/supabase-js';
+// Future: src/modules/ai/context.builder.ts (planned)
+import { supabase } from '../../core/config/database.js';
+import { selectRow } from '../../core/config/database-helpers.js';
 
 export class ContextBuilder {
-  private supabase;
-
-  constructor() {
-    this.supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY!
-    );
-  }
-
   async buildForUser(userId: string) {
-    // Get user profile
-    const { data: profile } = await this.supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    // Get user profile using type-safe helpers
+    const { data: profile } = await selectRow('profiles', (q) => 
+      q.eq('id', userId)
+    );
+    
+    if (!profile) throw new Error('User not found');
+    
+    // Get recent workouts (last 5) using type-safe helpers
+    const { data: recentWorkouts } = await selectRows('workout_logs', (q) => 
+      q.eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(5)
+    );
 
-    // Get recent workouts (last 5)
-    const { data: recentWorkouts } = await this.supabase
-      .from('workout_logs')
-      .select('*')
-      .eq('user_id', userId)
-      .order('log_date', { ascending: false })
-      .limit(5);
-
-    // Get active workout plan
-    const { data: activeWorkout } = await this.supabase
-      .from('workouts')
-      .select('*')
-      .eq('user_id', userId)
+    // Get active workout plan using type-safe helpers
+    const { data: activeWorkout } = await selectRow('workouts', (q) => 
+      q.eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+    );
 
     return {
       profile: profile || {},
@@ -6458,105 +6281,105 @@ graph TB
 - **Routines**: http://localhost:3000/api/v1/workouts/routines
 - **Dashboard**: http://localhost:3000/api/v1/dashboard
 - **Settings**: http://localhost:3000/api/v1/settings
-- **Personal Info**: http://localhost:3000/api/v1/users/personal
+- **Personal Info**: http://localhost:3000/api/v1/personal
 
 #### **Testing and Development**
-- **Vitest UI**: http://localhost:51204 (when running `npm run test:ui`)
-- **Coverage Report**: Generated in `coverage/` after `npm run test:coverage`
+- **Vitest UI**: http://localhost:51204 (when running `pnpm run test:ui`)
+- **Coverage Report**: Generated in `coverage/` after `pnpm run test:coverage`
 
 ### Actual Backend Project Structure
 
 ```mermaid
 graph TB  
-  subgraph "backend/"
-    ROOT["backend/"]
+  subgraph "PTI-GymPalBack/"
+    ROOT["Root Directory"]
     
     subgraph "src/ - Source Code"
-      INDEX["index.ts - Entry Point"]
+      APP["app.ts<br/>Main Hono App Configuration"]
+      SERVER["server.ts<br/>Entry Point"]
       
-      subgraph "modules/ - Business Modules"
-        AUTH_MOD["auth/ - Authentication"]
-        USER_MOD["users/ - User Management"]
-        WORKOUT_MOD["workouts/ - Workouts"]
-        SOCIAL_MOD["social/ - Social Features"]
+      subgraph "core/ - Core Infrastructure"
+        CONFIG["config/<br/>- database.ts<br/>- database-helpers.ts<br/>- env.ts<br/>- logger.ts"]
+        CONSTANTS["constants/<br/>- api.ts"]
+        ROUTES["routes.ts<br/>Centralized Routes"]
+        TYPES["types/<br/>- database.types.ts"]
+        UTILS["utils/<br/>- response.ts<br/>- errors.ts<br/>- auth.ts<br/>- auth-errors.ts"]
       end
       
-      subgraph "routes/ - Route Handlers"
-        AUTH_HANDLER["auth.handler.ts"]
-        USER_HANDLER["user.handler.ts"]
-        WORKOUT_HANDLER["workout.handler.ts"]
-        SOCIAL_HANDLER["social.handler.ts"]
-        POSTS_HANDLER["posts.handler.ts"]
-        ROUTINES_HANDLER["routines.handler.ts"]
-        DASHBOARD_HANDLER["dashboard.handler.ts"]
-        SETTINGS_HANDLER["settings.handler.ts"]
-        PERSONAL_HANDLER["personal.handler.ts"]
+      subgraph "modules/ - Business Modules (8 modules)"
+        AUTH_MOD["auth/<br/>routes, handlers,<br/>service, schemas, types"]
+        USER_MOD["users/<br/>routes, handlers,<br/>service, schemas, types"]
+        WORKOUT_MOD["workouts/<br/>routes, handlers,<br/>service, schemas, types"]
+        EXERCISE_MOD["exercises/<br/>routes, handlers,<br/>service, schemas, types"]
+        SOCIAL_MOD["social/<br/>routes, handlers,<br/>service, schemas, types"]
+        DASHBOARD_MOD["dashboard/<br/>routes, handlers,<br/>service, schemas, types"]
+        PERSONAL_MOD["personal/<br/>routes, handlers,<br/>service, schemas, types"]
+        SETTINGS_MOD["settings/<br/>routes, handlers,<br/>service, schemas, types"]
       end
       
-      subgraph "shared/ - Shared Utils"
-        DB["db/ - DB Config"]
-        MIDDLEWARE["middleware/ - Middlewares"]
-        UTILS["utils/ - Utilities"]
+      subgraph "middleware/ - HTTP Middleware"
+        AUTH_MW["auth.ts<br/>Authentication"]
+        ERROR_MW["error.ts<br/>Global Error Handler"]
+        LOGGING_MW["logging.ts<br/>Request Logging (Pino)"]
+        VALIDATION_MW["validation.ts<br/>Zod Validation"]
+        RATE_LIMIT_MW["rate-limit.ts<br/>Rate Limiting"]
       end
       
-      subgraph "types/ - TypeScript Types"
-        DB_TYPES["database.types.ts"]
-        CUSTOM_TYPES["Custom Types"]
+      subgraph "plugins/ - Hono Plugins"
+        HEALTH_PLUGIN["health.ts<br/>Health Check"]
+        OPENAPI_PLUGIN["openapi.ts<br/>OpenAPI Documentation"]
       end
     end
     
     subgraph "supabase/ - Database"
-      CONFIG["config.toml - Config"]
-      MIGRATIONS["migrations/ - SQL Migrations"]
-    end
-    
-    subgraph "scripts/ - Automation Scripts"
-      SETUP["setup-database.sh"]
-      OPENAPI["generate-complete-openapi.js"]
-    end
-    
-    subgraph "config/ - Configuration"
-      ENV["env.ts - Env Variables"]
-    end
-    
-    subgraph "tests/ - Testing"
-      UNIT_TESTS["Unit Tests"]
-      INTEGRATION_TESTS["Integration Tests"]
-    end
-    
-    subgraph "docs/ - Documentation"
-      API_DOCS["API Documentation"]
+      SUPABASE_CONFIG["config.toml"]
+      MIGRATIONS["migrations/<br/>- 001_schema.sql<br/>- 002_rls_policies.sql<br/>- 003_seed_data.sql<br/>- 004_triggers.sql"]
     end
     
     subgraph "Config Files"
-      PACKAGE["package.json"]
+      PACKAGE["package.json<br/>(pnpm@9.0.0)"]
       TSCONFIG["tsconfig.json"]
-      VITEST["vitest.config.ts"]
       DOCKERFILE["Dockerfile"]
-      GITIGNORE[".gitignore"]
-      ENV_EXAMPLE["env.example"]
+      OPENAPI_JSON["openapi.json"]
+      ENV_EXAMPLE[".env.example"]
+    end
+    
+    subgraph "docs/ - Documentation"
+      ARCHITECTURE["ARCHITECTURE.md"]
+      MODULES["MODULES.md"]
     end
   end
   
-  %% Relationships
-  INDEX --> AUTH_MOD
-  INDEX --> USER_MOD
-  INDEX --> WORKOUT_MOD
-  INDEX --> SOCIAL_MOD
+  %% Relationships - Application Flow
+  SERVER --> APP
+  APP --> CONFIG
+  APP --> MIDDLEWARE
+  APP --> PLUGINS
+  APP --> MODULES
   
-  AUTH_MOD --> AUTH_HANDLER
-  USER_MOD --> USER_HANDLER
-  WORKOUT_MOD --> WORKOUT_HANDLER
-  SOCIAL_MOD --> SOCIAL_HANDLER
-  
-  AUTH_HANDLER --> MIDDLEWARE
-  USER_HANDLER --> MIDDLEWARE
-  WORKOUT_HANDLER --> MIDDLEWARE
-  SOCIAL_HANDLER --> MIDDLEWARE
-  
+  %% Core dependencies
+  MODULES --> ROUTES
+  MODULES --> UTILS
+  MODULES --> TYPES
+  MIDDLEWARE --> CONFIG
   MIDDLEWARE --> UTILS
-  UTILS --> DB
-  DB --> MIGRATIONS
+  
+  %% Module structure
+  AUTH_MOD --> AUTH_MW
+  USER_MOD --> AUTH_MW
+  WORKOUT_MOD --> AUTH_MW
+  EXERCISE_MOD --> AUTH_MW
+  SOCIAL_MOD --> AUTH_MW
+  DASHBOARD_MOD --> AUTH_MW
+  PERSONAL_MOD --> AUTH_MW
+  SETTINGS_MOD --> AUTH_MW
+  
+  %% Database
+  CONFIG --> MIGRATIONS
+  MODULES --> CONFIG
+  
+  %% Documentation
+  OPENAPI_PLUGIN --> OPENAPI_JSON
 ```
 
 ### Actual Frontend Project Structure
@@ -6756,86 +6579,102 @@ graph LR
 - **`workouts/`**: Workouts, exercises, sessions
 - **`social/`**: Posts, likes, comments, social feed
 
-#### **📁 src/routes/ - Route Handlers**
+#### **📁 Backend Module Structure**
 
-Each handler manages a specific group of endpoints:
+Each module follows a consistent structure with all components in the same directory:
 
-- **`auth.handler.ts`**: `/api/v1/auth/*`
-- **`user.handler.ts`**: `/api/v1/users/*`
-- **`workout.handler.ts`**: `/api/v1/workouts/*`
-- **`social.handler.ts`**: `/api/v1/social/*`
-- **`posts.handler.ts`**: `/api/v1/social/posts/*`
-- **`routines.handler.ts`**: `/api/v1/workouts/routines/*`
-- **`dashboard.handler.ts`**: `/api/v1/dashboard/*`
-- **`settings.handler.ts`**: `/api/v1/settings/*`
-- **`personal.handler.ts`**: `/api/v1/users/personal/*`
+- **`auth/`**: `/api/v1/auth/*`
+  - `routes.ts`: Route definitions with @openapi comments
+  - `handlers.ts`: HTTP request handlers
+  - `service.ts`: Business logic
+  - `schemas.ts`: Zod validation schemas
+  - `types.ts`: TypeScript type definitions
 
-#### **📁 src/shared/ - Shared Utilities**
+- **`users/`**: `/api/v1/users/*`
+- **`workouts/`**: `/api/v1/workouts/*`
+- **`exercises/`**: `/api/v1/exercises/*`
+- **`social/`**: `/api/v1/social/*`
+- **`dashboard/`**: `/api/v1/dashboard/*`
+- **`personal/`**: `/api/v1/personal/*`
+- **`settings/`**: `/api/v1/settings/*`
 
-**`middleware/`**:
-- `auth.middleware.ts`: JWT verification
-- `error.middleware.ts`: Global error handling
-- `rate-limit.middleware.ts`: Rate limiting
-- `validation.middleware.ts`: Data validation
+#### **📁 src/core/ - Core Infrastructure**
 
-**`utils/`** (25+ utilities):
-- `database.ts`: Supabase connection
-- `validation.ts`: Zod validators
-- `response.ts`: API response formatting
-- `security.ts`: Security functions
-- `logger.ts`: Logging system
-- `cache.ts`: Cache management
-- `email.ts`: Email sending
-- `storage.ts`: File management
-- And 18+ more utilities...
+**`config/`**:
+- `database.ts`: Supabase client configuration
+- `database-helpers.ts`: Type-safe database operation helpers
+- `env.ts`: Environment variables with Zod validation
+- `logger.ts`: Pino logger configuration
+
+**`utils/`**:
+- `response.ts`: API response formatting helpers
+- `errors.ts`: Custom error classes
+- `auth.ts`: Authentication utilities
+
+**`constants/`**:
+- `api.ts`: HTTP status codes, error codes, API messages
+
+**`routes.ts`**: Centralized route constants (single source of truth)
+
+**`types/`**:
+- `database.types.ts`: Supabase generated types with helper types
+
+#### **📁 src/middleware/ - Global Middleware**
+
+- `auth.ts`: JWT authentication middleware
+- `error.ts`: Global error handler
+- `logging.ts`: Request logging with Pino
+- `validation.ts`: Zod validation middleware
+- `rate-limit.ts`: Rate limiting middleware
 
 #### **📁 supabase/ - Database**
 
 **`migrations/`**:
-- `001_initial_schema.sql`: Initial schema
-- `002_rls_policies.sql`: Security policies
-- `003_seed_data.sql`: Test data
-- `004_personal_info_and_enhanced_features.sql`: Advanced features
+- `001_schema.sql`: Initial database schema
+- `002_rls_policies.sql`: Row Level Security policies
+- `003_seed_data.sql`: Seed data for development
+- `004_triggers.sql`: Database triggers and functions (including `delete_own_account`)
 
 **`config.toml`**: Complete local Supabase config
 
-#### **Automation Scripts**
+#### **Scripts and Automation**
 
-- **`setup-database.sh`**: Initial DB setup
-- **`generate-openapi.js`**: Unified OpenAPI documentation generation
+- **OpenAPI Generation**: `pnpm run docs:generate` - Generates OpenAPI documentation from code
+- **Database Types**: `pnpm run db:generate-types` - Generates TypeScript types from Supabase schema
+- **Database Management**: Supabase CLI commands (`pnpm run db:*`)
 
 
 ### Available Development Commands
 
 ```bash
 # Development
-npm run dev              # Server with hot-reload
-npm run serve            # Local production server
-npm run build            # Build for production
-npm run start            # Start production server
+pnpm run dev              # Server with hot-reload
+pnpm run build            # Build for production
+pnpm run start            # Start production server
 
 # Database
-npm run db:start         # Start local Supabase
-npm run db:stop          # Stop local Supabase
-npm run db:reset         # Reset database
-npm run db:migrate       # Apply migrations
-npm run db:generate-types # Generate TypeScript types
-npm run db:setup         # Initial setup
+pnpm run db:start         # Start local Supabase
+pnpm run db:stop          # Stop local Supabase
+pnpm run db:reset         # Reset database
+pnpm run db:migrate       # Apply migrations
+pnpm run db:generate-types # Generate TypeScript types
+pnpm run db:status        # Check Supabase status
 
 # Testing
-npm run test             # Unit tests
-npm run test:ui          # Testing UI
-npm run test:coverage    # Coverage tests
+pnpm run test             # Unit tests
+pnpm run test:ui          # Testing UI
+pnpm run test:coverage    # Coverage tests
+pnpm run test:watch       # Watch mode tests
 
 # Code Quality
-npm run lint             # Linting
-npm run lint:fix         # Lint + fix
-npm run type-check       # Type checking
+pnpm run lint             # Linting
+pnpm run lint:fix         # Lint + fix
+pnpm run type-check       # Type checking
 
 # Documentation
-npm run docs:generate          # Generate complete OpenAPI
-npm run docs:serve             # Serve documentation
-npm run docs:open              # Open docs in browser
+pnpm run docs:generate    # Generate OpenAPI documentation
+pnpm run docs:serve       # Serve documentation
+pnpm run docs:open        # Open docs in browser
 ```
 
 ### CI/CD Pipeline
@@ -6856,21 +6695,21 @@ graph TB
   end
   
   subgraph "🧪 Stage 2: Testing"
-    UNIT_TESTS[Unit Tests<br/>npm run test]
-    INTEGRATION_TESTS[Integration Tests<br/>npm run test:integration]
-    COVERAGE[Coverage Report<br/>npm run test:coverage]
+    UNIT_TESTS[Unit Tests<br/>pnpm run test]
+    INTEGRATION_TESTS[Integration Tests<br/>pnpm run test:integration]
+    COVERAGE[Coverage Report<br/>pnpm run test:coverage]
     TEST_RESULTS[Test Results Analysis]
   end
   
   subgraph "🔍 Stage 3: Code Quality"
-    LINT[Lint Code<br/>npm run lint]
-    TYPE_CHECK[Type Check<br/>npm run type-check]
-    SECURITY[Security Scan<br/>npm audit]
+    LINT[Lint Code<br/>pnpm run lint]
+    TYPE_CHECK[Type Check<br/>pnpm run type-check]
+    SECURITY[Security Scan<br/>pnpm audit]
     VULNERABILITIES[Vulnerability Check]
   end
   
   subgraph "🏗️ Stage 4: Build"
-    BUILD[Build Application<br/>npm run build]
+    BUILD[Build Application<br/>pnpm run build]
     DOCKER_BUILD[Docker Build<br/>docker build -t gympal-backend]
     DOCKER_PUSH[Docker Push to Registry]
     IMAGE_TAG[Tag Image with Git SHA]
@@ -6963,7 +6802,7 @@ graph TB
     end
     
     subgraph "Security Tests"
-      SEC_SCAN[Security Scan<br/>npm audit]
+      SEC_SCAN[Security Scan<br/>pnpm audit]
       SEC_SAST[Static Analysis<br/>semgrep]
       SEC_DEPS[Dependency Check<br/>snyk]
       SEC_REPORT[Security Report]
@@ -7104,14 +6943,14 @@ graph TB
     CODE_CHANGES[Code Changes Detected]
     
     subgraph "Static Analysis"
-      ESLINT[ESLint Analysis<br/>npm run lint]
-      PRETTIER[Prettier Format Check<br/>npm run format:check]
-      TSC[TypeScript Compilation<br/>npm run type-check]
+      ESLINT[ESLint Analysis<br/>pnpm run lint]
+      PRETTIER[Prettier Format Check<br/>pnpm run format:check]
+      TSC[TypeScript Compilation<br/>pnpm run type-check]
       SONARQUBE[SonarQube Analysis]
     end
     
     subgraph "Security Analysis"
-      NPM_AUDIT[NPM Audit<br/>npm audit]
+      PNPM_AUDIT[PNPM Audit<br/>pnpm audit]
       SNYK_SCAN[Snyk Security Scan]
       SEMGREP[Semgrep SAST]
       OWASP[OWASP Dependency Check]
@@ -7147,12 +6986,12 @@ graph TB
   CODE_CHANGES --> TSC
   CODE_CHANGES --> SONARQUBE
   
-  ESLINT --> NPM_AUDIT
+  ESLINT --> PNPM_AUDIT
   PRETTIER --> SNYK_SCAN
   TSC --> SEMGREP
   SONARQUBE --> OWASP
   
-  NPM_AUDIT --> COMPLEXITY
+  PNPM_AUDIT --> COMPLEXITY
   SNYK_SCAN --> DUPLICATION
   SEMGREP --> MAINTAINABILITY
   OWASP --> RELIABILITY
