@@ -1,1136 +1,661 @@
-# Backend Architecture Documentation
+# GymPal Backend API - Architecture Documentation
+
+## Overview
+
+GymPal Backend is a comprehensive RESTful API built with **Hono**, **TypeScript**, and **Supabase** for a fitness tracking application with social features. The API provides endpoints for user authentication, workout management, exercise tracking, social interactions, and analytics.
 
 ## Table of Contents
 
-1. [Architectural Overview](#architectural-overview)
-2. [Technology Stack](#technology-stack)
-3. [Microservices Architecture](#microservices-architecture)
-4. [API Gateway Design](#api-gateway-design)
-5. [Service Communication Patterns](#service-communication-patterns)
-6. [Data Flow and Integration](#data-flow-and-integration)
-7. [Security Architecture](#security-architecture)
-8. [Scalability and Performance](#scalability-and-performance)
-9. [Monitoring and Observability](#monitoring-and-observability)
-10. [Deployment and DevOps](#deployment-and-devops)
+- [Architecture Overview](#architecture-overview)
+- [Technology Stack](#technology-stack)
+- [Project Structure](#project-structure)
+- [Request Flow](#request-flow)
+- [Authentication Flow](#authentication-flow)
+- [Database Schema](#database-schema)
+- [Module Architecture](#module-architecture)
+- [API Endpoints](#api-endpoints)
+- [Error Handling](#error-handling)
+- [Security Architecture](#security-architecture)
+- [Deployment Architecture](#deployment-architecture)
 
----
-
-## Architectural Overview
-
-### Project Context
-**FitnessHub Backend** is a comprehensive microservices-based backend system designed to support a fitness/gym management platform with social networking features and AI-powered personal assistant capabilities. The system serves as the foundation for a 5-person student team project spanning 5 months, focusing on robust, scalable, and maintainable architecture.
-
-### Architecture Principles
-
-#### 1. Microservices Architecture
-- **Service Independence**: Each microservice operates independently with its own database and business logic
-- **Domain-Driven Design**: Services are organized around business domains (User, Workout, Social, AI, etc.)
-- **Loose Coupling**: Services communicate through well-defined APIs and message queues
-- **High Cohesion**: Each service focuses on a specific business capability
-
-#### 2. API-First Design
-- **RESTful APIs**: Standard HTTP methods and status codes
-- **OpenAPI Specification**: Comprehensive API documentation with Swagger/OpenAPI 3.0
-- **Versioning Strategy**: Semantic versioning for API endpoints
-- **Consistent Response Format**: Standardized error handling and response structure
-
-#### 3. Event-Driven Architecture
-- **Asynchronous Communication**: Event-driven patterns for non-critical operations
-- **Event Sourcing**: Audit trail and state reconstruction capabilities
-- **CQRS**: Command Query Responsibility Segregation for read/write optimization
-- **Eventual Consistency**: Acceptable for non-critical business operations
-
-### Technology Justification
-
-#### Hono Framework
-- **Performance**: Ultra-fast HTTP framework built on Web Standards
-- **TypeScript Native**: First-class TypeScript support with excellent type inference
-- **Middleware Ecosystem**: Rich middleware support for authentication, validation, and logging
-- **Edge Runtime**: Compatible with edge computing platforms
-- **Lightweight**: Minimal overhead compared to Express.js
-
-#### Node.js Runtime
-- **JavaScript Ecosystem**: Leverages existing team expertise
-- **NPM Package Manager**: Rich ecosystem of packages and libraries
-- **Event-Driven**: Non-blocking I/O for high concurrency
-- **Community Support**: Large community and extensive documentation
-
----
-
-## Technology Stack
-
-### Core Technologies
-- **Runtime**: Node.js 18+ with TypeScript 5+
-- **Framework**: Hono (API Gateway and microservices)
-- **Database**: PostgreSQL 15+ (primary), Redis 7+ (caching)
-- **Message Queue**: Apache Kafka or Redis Streams
-- **Authentication**: Supabase Auth + JWT
-- **File Storage**: AWS S3 or MinIO (self-hosted)
-
-### Development Tools
-- **Language**: TypeScript with strict mode
-- **Validation**: Zod for runtime type validation
-- **Testing**: Jest + Supertest for API testing
-- **Linting**: ESLint + Prettier
-- **Documentation**: OpenAPI 3.0 + Swagger UI
-
-### Infrastructure
-- **Containerization**: Docker + Docker Compose
-- **Orchestration**: Kubernetes
-- **Service Mesh**: Istio (optional)
-- **API Gateway**: Hono + Kong (optional)
-- **Monitoring**: Prometheus + Grafana
-- **Logging**: ELK Stack (Elasticsearch, Logstash, Kibana)
-
----
-
-## Microservices Architecture
-
-### Service Overview
+## Architecture Overview
 
 ```mermaid
 graph TB
-    subgraph "Client Layer"
-        A[Web Frontend]
-        B[Mobile App]
-        C[AI Chatbot]
-    end
+    Client[Client Application] -->|HTTP/HTTPS| Server[Hono Server]
+    Server -->|Middleware Layer| MW[Middleware]
+    MW --> AuthMW[Authentication<br/>Validation<br/>Logging<br/>Rate Limiting]
+    AuthMW --> Routes[Route Handlers]
+    Routes --> Services[Business Logic Services]
+    Services --> Database[(Supabase<br/>PostgreSQL)]
+    Services --> AuthService[Supabase Auth]
     
-    subgraph "API Gateway Layer"
-        D[Hono API Gateway]
-        E[Rate Limiting]
-        F[Authentication]
-        G[Request Routing]
-    end
+    Routes --> Response[Formatted Response]
+    Response --> Client
     
-    subgraph "Core Services"
-        H[User Service]
-        I[Workout Service]
-        J[Social Service]
-        K[AI Service]
-        L[Blockchain Service]
-        M[Notification Service]
-    end
-    
-    subgraph "Supporting Services"
-        N[File Service]
-        O[Analytics Service]
-        P[Recommendation Service]
-        Q[Audit Service]
-    end
-    
-    subgraph "External Services"
-        R[Supabase Auth]
-        S[Dify AI]
-        T[Polygon Network]
-        U[Proton Mail]
-        V[Stripe/Payment]
-    end
-    
-    subgraph "Data Layer"
-        W[PostgreSQL]
-        X[Redis Cache]
-        Y[Message Queue]
-        Z[File Storage]
-    end
-    
-    A --> D
-    B --> D
-    C --> D
-    
-    D --> E
-    D --> F
-    D --> G
-    
-    G --> H
-    G --> I
-    G --> J
-    G --> K
-    G --> L
-    G --> M
-    
-    H --> N
-    I --> P
-    J --> O
-    K --> Q
-    
-    H --> R
-    K --> S
-    L --> T
-    M --> U
-    L --> V
-    
-    H --> W
-    I --> W
-    J --> W
-    K --> W
-    L --> W
-    M --> W
-    
-    H --> X
-    I --> X
-    J --> X
-    K --> X
-    
-    H --> Y
-    I --> Y
-    J --> Y
-    K --> Y
-    L --> Y
-    M --> Y
-    
-    N --> Z
+    style Server fill:#4a90e2
+    style Database fill:#3fcf8e
+    style AuthService fill:#ff6b6b
+    style Routes fill:#feca57
+    style Services fill:#48dbfb
 ```
 
-### Service Responsibilities
+## Technology Stack
 
-#### 1. User Service
-- **Domain**: User management and profiles
-- **Responsibilities**:
-  - User registration and authentication
-  - Profile management and preferences
-  - User statistics and achievements
-  - Privacy settings and data export
-- **Database**: `users` schema in PostgreSQL
-- **APIs**: `/api/v1/users/*`
+### Core Framework
+- **Hono**: Fast, lightweight web framework for the edge
+- **TypeScript**: Type-safe JavaScript with strict mode
+- **Node.js**: Runtime environment (v20+)
+- **@hono/node-server**: Node.js server adapter for Hono
 
-#### 2. Workout Service
-- **Domain**: Workout and exercise management
-- **Responsibilities**:
-  - Workout creation and templates
-  - Exercise library and tracking
-  - Progress tracking and analytics
-  - Workout recommendations
-- **Database**: `workouts` schema in PostgreSQL
-- **APIs**: `/api/v1/workouts/*`
+### Database & Auth
+- **Supabase**: PostgreSQL database with built-in auth
+- **PostgreSQL**: Relational database
+- **Row Level Security (RLS)**: Database-level security
 
-#### 3. Social Service
-- **Domain**: Social networking features
-- **Responsibilities**:
-  - Social feed and posts
-  - User connections and following
-  - Comments and interactions
-  - Social recommendations
-- **Database**: `social` schema in PostgreSQL
-- **APIs**: `/api/v1/social/*`
+### Validation & Schema
+- **Zod**: Runtime schema validation and TypeScript type inference
 
-#### 4. AI Service
-- **Domain**: AI-powered features and recommendations
-- **Responsibilities**:
-  - Chat interface with AI assistant
-  - Personalized recommendations
-  - Workout plan generation
-  - Nutrition advice and tracking
-- **Database**: `ai` schema in PostgreSQL
-- **APIs**: `/api/v1/ai/*`
+### Logging & Monitoring
+- **Pino**: Fast, JSON-logging library
+- Structured logging with request/response tracking
 
-#### 5. Blockchain Service
-- **Domain**: NFT and blockchain integration
-- **Responsibilities**:
-  - NFT minting for achievements
-  - Wallet integration
-  - Smart contract interactions
-  - Transaction history
-- **Database**: `blockchain` schema in PostgreSQL
-- **APIs**: `/api/v1/blockchain/*`
+### Additional Tools
+- **OpenAPI/Scalar**: Interactive API documentation
+- **Docker**: Containerization
+- **pnpm**: Package manager
 
-#### 6. Notification Service
-- **Domain**: Communication and notifications
-- **Responsibilities**:
-  - Push notifications
-  - Email notifications
-  - SMS notifications (optional)
-  - Notification preferences
-- **Database**: `notifications` schema in PostgreSQL
-- **APIs**: `/api/v1/notifications/*`
+## Project Structure
 
----
-
-## API Gateway Design
-
-### Hono API Gateway Architecture
-
-```typescript
-// API Gateway Structure
-import { Hono } from 'hono'
-import { cors } from 'hono/cors'
-import { logger } from 'hono/logger'
-import { rateLimiter } from 'hono/rate-limiter'
-import { jwt } from 'hono/jwt'
-import { validator } from 'hono/validator'
-
-const app = new Hono()
-
-// Global Middleware
-app.use('*', logger())
-app.use('*', cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
-  credentials: true
-}))
-
-// Rate Limiting
-app.use('*', rateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  standardHeaders: true,
-  legacyHeaders: false
-}))
-
-// Health Check
-app.get('/health', (c) => {
-  return c.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    version: process.env.APP_VERSION || '1.0.0',
-    services: await checkServiceHealth()
-  })
-})
-
-// Service Routes
-app.route('/api/v1/users', userRoutes)
-app.route('/api/v1/workouts', workoutRoutes)
-app.route('/api/v1/social', socialRoutes)
-app.route('/api/v1/ai', aiRoutes)
-app.route('/api/v1/blockchain', blockchainRoutes)
-app.route('/api/v1/notifications', notificationRoutes)
-
-// Error Handling
-app.onError((err, c) => {
-  console.error('API Gateway Error:', err)
-  return c.json({
-    error: 'Internal Server Error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
-    timestamp: new Date().toISOString()
-  }, 500)
-})
-
-export default app
+```mermaid
+graph TD
+    Root[GymPal Backend] --> Src[src/]
+    Root --> Dist[dist/]
+    Root --> Supabase[supabase/]
+    
+    Src --> Core[core/]
+    Src --> Modules[modules/]
+    Src --> Middleware[middleware/]
+    Src --> Plugins[plugins/]
+    Src --> App[app.ts]
+    Src --> Server[server.ts]
+    
+    Core --> Config[config/]
+    Core --> Utils[utils/]
+    Core --> Constants[constants/]
+    Core --> Routes[routes.ts]
+    Core --> Types[types/]
+    
+    Modules --> Auth[auth/]
+    Modules --> Users[users/]
+    Modules --> Workouts[workouts/]
+    Modules --> Exercises[exercises/]
+    Modules --> Social[social/]
+    Modules --> Dashboard[dashboard/]
+    Modules --> Personal[personal/]
+    Modules --> Settings[settings/]
+    
+    Auth --> AuthHandlers[handlers.ts]
+    Auth --> AuthService[service.ts]
+    Auth --> AuthRoutes[routes.ts]
+    Auth --> AuthSchemas[schemas.ts]
+    Auth --> AuthTypes[types.ts]
+    
+    Middleware --> AuthMW[auth.ts]
+    Middleware --> ErrorMW[error.ts]
+    Middleware --> LoggingMW[logging.ts]
+    Middleware --> ValidationMW[validation.ts]
+    Middleware --> RateLimitMW[rate-limit.ts]
+    
+    Plugins --> Health[health.ts]
+    Plugins --> OpenAPI[openapi.ts]
+    
+    style Root fill:#4a90e2
+    style Modules fill:#feca57
+    style Core fill:#48dbfb
+    style Middleware fill:#ff6b6b
+    style Plugins fill:#9b59b6
 ```
 
-### Routing Strategy
+### Directory Structure Details
 
-#### 1. Service Discovery
-```typescript
-// Service Registry
-interface ServiceConfig {
-  name: string
-  url: string
-  healthCheck: string
-  timeout: number
-  retries: number
-}
-
-const services: Record<string, ServiceConfig> = {
-  user: {
-    name: 'user-service',
-    url: process.env.USER_SERVICE_URL || 'http://user-service:3001',
-    healthCheck: '/health',
-    timeout: 5000,
-    retries: 3
-  },
-  workout: {
-    name: 'workout-service',
-    url: process.env.WORKOUT_SERVICE_URL || 'http://workout-service:3002',
-    healthCheck: '/health',
-    timeout: 5000,
-    retries: 3
-  },
-  // ... other services
-}
+```
+PTI-GymPalBack/
+├── src/
+│   ├── app.ts                    # Main Hono application setup
+│   ├── server.ts                 # Server entry point
+│   ├── core/                     # Core application infrastructure
+│   │   ├── config/               # Configuration files
+│   │   │   ├── database.ts       # Supabase client configuration
+│   │   │   ├── database-helpers.ts # Type-safe DB operation helpers
+│   │   │   ├── env.ts            # Environment variables
+│   │   │   └── logger.ts         # Pino logger configuration
+│   │   ├── constants/           # Application constants
+│   │   │   └── api.ts            # HTTP status codes, error codes
+│   │   ├── routes.ts             # Centralized route constants
+│   │   ├── types/                # Type definitions
+│   │   │   └── database.types.ts # Supabase generated types
+│   │   └── utils/                # Utility functions
+│   │       ├── response.ts       # Response helpers
+│   │       ├── errors.ts         # Custom error classes
+│   │       └── auth.ts           # Auth utilities
+│   ├── middleware/               # HTTP middleware
+│   │   ├── auth.ts              # Authentication middleware
+│   │   ├── error.ts             # Global error handler
+│   │   ├── logging.ts           # Request logging
+│   │   ├── validation.ts        # Zod validation
+│   │   └── rate-limit.ts         # Rate limiting
+│   ├── modules/                  # Business domain modules
+│   │   ├── auth/                # Authentication module
+│   │   ├── users/               # User management module
+│   │   ├── workouts/            # Workout management module
+│   │   ├── exercises/           # Exercise library module
+│   │   ├── social/              # Social features module
+│   │   ├── dashboard/           # Dashboard analytics module
+│   │   ├── personal/           # Personal data module
+│   │   └── settings/            # User settings module
+│   └── plugins/                 # Hono plugins
+│       ├── health.ts            # Health check plugin
+│       └── openapi.ts           # OpenAPI documentation plugin
+├── supabase/
+│   └── migrations/               # Database migrations
+│       ├── 001_schema.sql       # Database schema
+│       ├── 002_rls_policies.sql # Row Level Security
+│       ├── 003_seed_data.sql    # Seed data
+│       └── 004_triggers.sql     # Database triggers & functions
+├── dist/                         # Compiled TypeScript output
+├── Dockerfile                    # Production Docker image
+├── docker-compose.yml            # Development environment
+├── package.json                  # Dependencies
+├── tsconfig.json                 # TypeScript configuration
+└── openapi.json                  # OpenAPI specification
 ```
 
-#### 2. Request Routing
-```typescript
-// Dynamic Service Routing
-const createServiceRouter = (serviceName: string) => {
-  return new Hono()
-    .use('*', async (c, next) => {
-      const service = services[serviceName]
-      if (!service) {
-        return c.json({ error: 'Service not found' }, 404)
-      }
-      
-      // Add service context
-      c.set('service', service)
-      await next()
-    })
-    .all('*', async (c) => {
-      const service = c.get('service')
-      const path = c.req.path.replace(`/api/v1/${serviceName}`, '')
-      
-      try {
-        const response = await fetch(`${service.url}${path}`, {
-          method: c.req.method,
-          headers: c.req.headers,
-          body: c.req.method !== 'GET' ? await c.req.text() : undefined
-        })
-        
-        return new Response(response.body, {
-          status: response.status,
-          headers: response.headers
-        })
-      } catch (error) {
-        return c.json({ error: 'Service unavailable' }, 503)
-      }
-    })
-}
+### Module Structure
+
+Each module follows a consistent structure:
+
+```
+module-name/
+├── routes.ts      # Route definitions with @openapi comments
+├── handlers.ts    # HTTP request handlers
+├── service.ts     # Business logic layer
+├── schemas.ts     # Zod validation schemas
+├── types.ts       # TypeScript type definitions
+└── index.ts       # Module exports
 ```
 
-### Authentication and Authorization
-
-#### 1. JWT Middleware
-```typescript
-// JWT Authentication
-app.use('/api/v1/*', async (c, next) => {
-  const token = c.req.header('Authorization')?.replace('Bearer ', '')
-  
-  if (!token) {
-    return c.json({ error: 'No token provided' }, 401)
-  }
-  
-  try {
-    const payload = await verifyJWT(token)
-    c.set('user', payload)
-    await next()
-  } catch (error) {
-    return c.json({ error: 'Invalid token' }, 401)
-  }
-})
-```
-
-#### 2. Role-Based Access Control
-```typescript
-// RBAC Middleware
-const requireRole = (roles: string[]) => {
-  return async (c: Context, next: Next) => {
-    const user = c.get('user')
-    
-    if (!user || !roles.includes(user.role)) {
-      return c.json({ error: 'Insufficient permissions' }, 403)
-    }
-    
-    await next()
-  }
-}
-
-// Usage
-app.get('/api/v1/admin/*', requireRole(['admin', 'moderator']))
-```
-
----
-
-## Service Communication Patterns
-
-### 1. Synchronous Communication (REST)
-
-#### Service-to-Service Calls
-```typescript
-// Service Client
-class ServiceClient {
-  constructor(private baseUrl: string, private timeout: number = 5000) {}
-  
-  async get<T>(path: string, headers?: Record<string, string>): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...headers
-      },
-      signal: AbortSignal.timeout(this.timeout)
-    })
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-    
-    return response.json()
-  }
-  
-  async post<T>(path: string, data: any, headers?: Record<string, string>): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...headers
-      },
-      body: JSON.stringify(data),
-      signal: AbortSignal.timeout(this.timeout)
-    })
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-    
-    return response.json()
-  }
-}
-```
-
-### 2. Asynchronous Communication (Events)
-
-#### Event Publishing
-```typescript
-// Event Publisher
-interface Event {
-  id: string
-  type: string
-  data: any
-  timestamp: Date
-  source: string
-}
-
-class EventPublisher {
-  constructor(private kafka: Kafka) {}
-  
-  async publish(topic: string, event: Event): Promise<void> {
-    const producer = this.kafka.producer()
-    await producer.connect()
-    
-    await producer.send({
-      topic,
-      messages: [{
-        key: event.id,
-        value: JSON.stringify(event)
-      }]
-    })
-    
-    await producer.disconnect()
-  }
-}
-```
-
-#### Event Consumption
-```typescript
-// Event Consumer
-class EventConsumer {
-  constructor(private kafka: Kafka, private serviceName: string) {}
-  
-  async subscribe(topic: string, handler: (event: Event) => Promise<void>): Promise<void> {
-    const consumer = this.kafka.consumer({ groupId: this.serviceName })
-    await consumer.connect()
-    await consumer.subscribe({ topic })
-    
-    await consumer.run({
-      eachMessage: async ({ message }) => {
-        try {
-          const event = JSON.parse(message.value?.toString() || '{}')
-          await handler(event)
-        } catch (error) {
-          console.error('Error processing event:', error)
-        }
-      }
-    })
-  }
-}
-```
-
-### 3. Circuit Breaker Pattern
-
-```typescript
-// Circuit Breaker Implementation
-class CircuitBreaker {
-  private failures = 0
-  private lastFailureTime = 0
-  private state: 'CLOSED' | 'OPEN' | 'HALF_OPEN' = 'CLOSED'
-  
-  constructor(
-    private threshold: number = 5,
-    private timeout: number = 60000,
-    private resetTimeout: number = 30000
-  ) {}
-  
-  async execute<T>(operation: () => Promise<T>): Promise<T> {
-    if (this.state === 'OPEN') {
-      if (Date.now() - this.lastFailureTime > this.resetTimeout) {
-        this.state = 'HALF_OPEN'
-      } else {
-        throw new Error('Circuit breaker is OPEN')
-      }
-    }
-    
-    try {
-      const result = await operation()
-      this.onSuccess()
-      return result
-    } catch (error) {
-      this.onFailure()
-      throw error
-    }
-  }
-  
-  private onSuccess(): void {
-    this.failures = 0
-    this.state = 'CLOSED'
-  }
-  
-  private onFailure(): void {
-    this.failures++
-    this.lastFailureTime = Date.now()
-    
-    if (this.failures >= this.threshold) {
-      this.state = 'OPEN'
-    }
-  }
-}
-```
-
----
-
-## Data Flow and Integration
-
-### 1. Request Flow Diagram
+## Request Flow
 
 ```mermaid
 sequenceDiagram
-    participant C as Client
-    participant G as API Gateway
-    participant A as Auth Service
-    participant S as Service
-    participant D as Database
-    participant Q as Message Queue
+    participant Client
+    participant Server
+    participant Middleware
+    participant Handler
+    participant Service
+    participant Database
     
-    C->>G: HTTP Request
-    G->>G: Rate Limiting
-    G->>A: Validate Token
-    A-->>G: User Context
-    G->>S: Forward Request
-    S->>D: Database Query
-    D-->>S: Data
-    S->>Q: Publish Event
-    S-->>G: Response
-    G-->>C: HTTP Response
+    Client->>Server: HTTP Request
+    Server->>Middleware: Route Matching
+    
+    alt Global Middleware
+        Middleware->>Middleware: Pretty JSON
+        Middleware->>Middleware: Logging
+        Middleware->>Middleware: CORS
+        Middleware->>Middleware: Rate Limiting
+    end
+    
+    alt Protected Route
+        Middleware->>Middleware: Authentication
+        Middleware->>Middleware: Token Validation
+    end
+    
+    alt Validation Required
+        Middleware->>Middleware: Request Validation
+        Middleware->>Middleware: Schema Check (Zod)
+    end
+    
+    Middleware->>Handler: Forward Request
+    
+    Handler->>Service: Business Logic Call
+    Service->>Database: Query/Transaction
+    Database->>Service: Result Set
+    Service->>Handler: Processed Data
+    
+    Handler->>Server: Formatted Response
+    Server->>Client: JSON Response
+    
+    alt Error Occurs
+        Handler->>Server: Throw Error
+        Server->>Middleware: Error Handler
+        Middleware->>Client: Error Response
+    end
 ```
 
-### 2. Event Flow Diagram
+## Authentication Flow
 
 ```mermaid
 sequenceDiagram
-    participant S1 as Service 1
-    participant Q as Message Queue
-    participant S2 as Service 2
-    participant S3 as Service 3
-    participant D as Database
+    participant User
+    participant Client
+    participant API
+    participant AuthService
+    participant SupabaseAuth
     
-    S1->>Q: Publish Event
-    Q->>S2: Consume Event
-    Q->>S3: Consume Event
-    S2->>D: Update Data
-    S3->>D: Update Data
-    S2-->>Q: Acknowledge
-    S3-->>Q: Acknowledge
+    User->>Client: Enter Credentials
+    Client->>API: POST /api/v1/auth/login
+    API->>API: Validate Input (Zod)
+    API->>AuthService: login(credentials)
+    AuthService->>SupabaseAuth: signInWithPassword()
+    SupabaseAuth->>AuthService: Session + User
+    AuthService->>API: AuthResponse (token)
+    API->>Client: { user, token, refresh_token }
+    Client->>Client: Store Tokens
+    
+    Note over Client: Use token in subsequent requests
+    
+    Client->>API: GET /api/v1/users/profile<br/>Authorization: Bearer {token}
+    API->>API: Verify Token (middleware)
+    API->>API: Extract User from Token
+    API->>Handler: Process Request
+    Handler->>Client: Protected Resource
 ```
 
-### 3. Data Consistency Patterns
+## Module Architecture
 
-#### Saga Pattern
-```typescript
-// Saga Coordinator
-class WorkoutCreationSaga {
-  async execute(workoutData: WorkoutData): Promise<void> {
-    const sagaId = generateId()
-    
-    try {
-      // Step 1: Create workout
-      const workout = await this.workoutService.create(workoutData)
-      
-      // Step 2: Update user stats
-      await this.userService.updateStats(workout.userId, workout)
-      
-      // Step 3: Publish social event
-      await this.eventPublisher.publish('workout.created', {
-        workoutId: workout.id,
-        userId: workout.userId,
-        timestamp: new Date()
-      })
-      
-      // Step 4: Generate AI recommendations
-      await this.aiService.generateRecommendations(workout.userId)
-      
-    } catch (error) {
-      // Compensate for failures
-      await this.compensate(sagaId, error)
-      throw error
-    }
-  }
-  
-  private async compensate(sagaId: string, error: any): Promise<void> {
-    // Implement compensation logic
-    console.error(`Saga ${sagaId} failed:`, error)
-  }
-}
-```
-
----
-
-## Security Architecture
-
-### 1. Authentication Flow
+Each module follows a consistent structure:
 
 ```mermaid
-sequenceDiagram
-    participant C as Client
-    participant G as API Gateway
-    participant A as Auth Service
-    participant S as Supabase
-    participant D as Database
+graph LR
+    Routes[routes.ts] --> Handlers[handlers.ts]
+    Handlers --> Service[service.ts]
+    Service --> Database[(Database)]
+    Service --> External[External Services]
     
-    C->>G: Login Request
-    G->>A: Forward to Auth Service
-    A->>S: Validate Credentials
-    S-->>A: JWT Token
-    A->>D: Store Session
-    A-->>G: Auth Response
-    G-->>C: JWT Token
+    Routes -.-> Schemas[schemas.ts]
+    Handlers -.-> Types[types.ts]
+    Service -.-> Types
+    
+    Routes --> AuthMW[Authentication<br/>Middleware]
+    Routes --> ValMW[Validation<br/>Middleware]
+    
+    style Routes fill:#4a90e2
+    style Handlers fill:#feca57
+    style Service fill:#48dbfb
+    style Database fill:#3fcf8e
 ```
 
-### 2. Security Middleware Stack
+### Module Responsibilities
 
-```typescript
-// Security Middleware
-app.use('*', helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
-    },
-  },
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true
-  }
-}))
+1. **routes.ts**: Defines HTTP endpoints, applies middleware, connects routes to handlers
+2. **handlers.ts**: HTTP request handlers that process requests, call services, format responses
+3. **service.ts**: Business logic layer that interacts with database and external services
+4. **schemas.ts**: Zod validation schemas for request/response validation
+5. **types.ts**: TypeScript type definitions for the module
 
-// CORS Configuration
-app.use('*', cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}))
+## Database Schema
 
-// Rate Limiting
-app.use('*', rateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: (req) => {
-    // Skip rate limiting for health checks
-    return req.path === '/health'
-  }
-}))
+The application uses Supabase (PostgreSQL) with the following main entities:
+
+```mermaid
+erDiagram
+    profiles ||--o{ workouts : creates
+    profiles ||--o{ exercises : creates
+    profiles ||--o{ posts : creates
+    profiles ||--o{ post_likes : gives
+    
+    workouts ||--o{ workout_exercises : contains
+    exercises ||--o{ workout_exercises : used_in
+    
+    posts ||--o{ post_likes : receives
+    
+    profiles {
+        uuid id PK
+        string username
+        string full_name
+        date date_of_birth
+        string gender
+        text bio
+        string avatar_url
+        string fitness_level
+        timestamp created_at
+    }
+    
+    workouts {
+        uuid id PK
+        uuid user_id FK
+        string name
+        integer duration_minutes
+        text description
+        timestamp created_at
+    }
+    
+    exercises {
+        uuid id PK
+        uuid created_by FK
+        string name
+        string muscle_group
+        array muscle_groups
+        array equipment
+        text description
+        boolean is_public
+    }
+    
+    posts {
+        uuid id PK
+        uuid user_id FK
+        text content
+        uuid workout_id FK
+        integer likes_count
+        timestamp created_at
+    }
+    
+    post_likes {
+        uuid id PK
+        uuid user_id FK
+        uuid post_id FK
+        timestamp created_at
+    }
 ```
+
+### Database Features
+
+- **Row Level Security (RLS)**: Enabled on all tables
+- **Foreign Key Constraints**: CASCADE deletions for data integrity
+- **Triggers**: Auto-create profiles, handle user deletions
+- **Functions**: Self-delete account function with SECURITY DEFINER
+
+## API Endpoints
+
+### Authentication Module (`/api/v1/auth`)
+
+```mermaid
+graph LR
+    Auth[Auth Module] --> Register[POST /register]
+    Auth --> Login[POST /login]
+    Auth --> Me[GET /me]
+    Auth --> Logout[POST /logout]
+    Auth --> Refresh[POST /refresh]
+    Auth --> Reset[POST /reset-password]
+    Auth --> Change[PUT /change-password/:id]
+    Auth --> Delete[DELETE /delete-account/:id]
+    
+    style Auth fill:#4a90e2
+    style Register fill:#feca57
+    style Login fill:#feca57
+```
+
+**Endpoints:**
+- `POST /api/v1/auth/register` - Register new user
+- `POST /api/v1/auth/login` - User login
+- `GET /api/v1/auth/me` - Get authenticated user
+- `POST /api/v1/auth/logout` - Logout
+- `POST /api/v1/auth/refresh` - Refresh token
+- `POST /api/v1/auth/reset-password` - Reset password
+- `PUT /api/v1/auth/change-password/:id` - Change password
+- `DELETE /api/v1/auth/delete-account/:id` - Delete account (self-service, no service role key required)
+
+### Users Module (`/api/v1/users`)
+
+```mermaid
+graph LR
+    Users[Users Module] --> Profile[GET /profile]
+    Users --> GetById[GET /:id]
+    Users --> Update[PUT /profile]
+    Users --> Search[GET /search]
+    Users --> Stats[GET /stats]
+    
+    style Users fill:#4a90e2
+```
+
+**Endpoints:**
+- `GET /api/v1/users/profile` - Get authenticated user profile
+- `PUT /api/v1/users/profile` - Update profile
+- `GET /api/v1/users/:id` - Get user by ID
+- `GET /api/v1/users/search` - Search users
+- `GET /api/v1/users/stats` - Get user statistics
+
+### Workouts Module (`/api/v1/workouts`)
+
+```mermaid
+graph LR
+    Workouts[Workouts Module] --> Create[POST /]
+    Workouts --> List[GET /]
+    Workouts --> GetById[GET /:id]
+    Workouts --> Update[PUT /:id]
+    Workouts --> Delete[DELETE /:id]
+    
+    style Workouts fill:#4a90e2
+```
+
+### Exercises Module (`/api/v1/exercises`)
+
+```mermaid
+graph LR
+    Exercises[Exercises Module] --> Create[POST /]
+    Exercises --> List[GET /]
+    Exercises --> GetById[GET /:id]
+    Exercises --> Categories[GET /categories]
+    Exercises --> MuscleGroups[GET /muscle-groups]
+    Exercises --> Equipment[GET /equipment-types]
+    Exercises --> Update[PUT /:id]
+    Exercises --> Delete[DELETE /:id]
+    
+    style Exercises fill:#4a90e2
+```
+
+### Social Module (`/api/v1/social`)
+
+```mermaid
+graph LR
+    Social[Social Module] --> CreatePost[POST /posts]
+    Social --> ListPosts[GET /posts]
+    Social --> GetPost[GET /posts/:id]
+    Social --> UpdatePost[PUT /posts/:id]
+    Social --> DeletePost[DELETE /posts/:id]
+    Social --> LikePost[POST /posts/:id/like]
+    Social --> UnlikePost[DELETE /posts/:id/like]
+    
+    style Social fill:#4a90e2
+```
+
+### Dashboard Module (`/api/v1/dashboard`)
+
+```mermaid
+graph LR
+    Dashboard[Dashboard Module] --> Overview[GET /overview]
+    Dashboard --> Stats[GET /stats]
+    Dashboard --> Activity[GET /recent-activity]
+    
+    style Dashboard fill:#4a90e2
+```
+
+### Personal Module (`/api/v1/personal`)
+
+- `GET /api/v1/personal` - Get personal information
+- `PUT /api/v1/personal` - Update personal information
+- `GET /api/v1/personal/fitness-profile` - Get fitness profile
+- `PUT /api/v1/personal/fitness-profile` - Update fitness profile
+
+### Settings Module (`/api/v1/settings`)
+
+- `GET /api/v1/settings` - Get all settings
+- `PUT /api/v1/settings` - Update settings
+- `GET /api/v1/settings/notifications` - Get notification settings
+- `PUT /api/v1/settings/notifications` - Update notification settings
+- `GET /api/v1/settings/privacy` - Get privacy settings
+- `PUT /api/v1/settings/privacy` - Update privacy settings
+
+## Error Handling Flow
+
+```mermaid
+graph TD
+    Request[HTTP Request] --> Handler[Handler]
+    Handler -->|Success| Success[Success Response]
+    Handler -->|Error| Catch[Catch Block]
+    Catch --> Logger[Log Error]
+    Logger --> ErrorType{Error Type}
+    
+    ErrorType -->|HTTPException| HTTPError[HTTP Exception Response]
+    ErrorType -->|AppError| AppErrorResp[App Error Response]
+    ErrorType -->|ZodError| ValidationError[Validation Error Response]
+    ErrorType -->|JWT Error| AuthError[Authentication Error Response]
+    ErrorType -->|Unknown| DefaultError[Default Error Response]
+    
+    HTTPError --> Client[Client]
+    AppErrorResp --> Client
+    ValidationError --> Client
+    AuthError --> Client
+    DefaultError --> Client
+    
+    style Handler fill:#4a90e2
+    style ErrorType fill:#ff6b6b
+```
+
+## Security Layers
+
+```mermaid
+graph TB
+    Request[Incoming Request] --> CORS[CORS Check]
+    CORS --> RateLimit[Rate Limiting]
+    RateLimit --> Auth{Authentication<br/>Required?}
+    
+    Auth -->|Yes| TokenCheck[Token Validation]
+    Auth -->|No| Validation
+    
+    TokenCheck -->|Valid| Validation[Request Validation]
+    TokenCheck -->|Invalid| AuthError[401 Unauthorized]
+    
+    Validation -->|Valid| Handler[Request Handler]
+    Validation -->|Invalid| ValidationError[400 Bad Request]
+    
+    Handler --> Service[Business Logic]
+    Service --> RLS[Row Level Security]
+    RLS --> Database[(Database)]
+    
+    style RateLimit fill:#ff6b6b
+    style TokenCheck fill:#feca57
+    style RLS fill:#3fcf8e
+```
+
+### Security Features
+
+- **JWT Authentication**: Token-based authentication via Supabase
+- **Row Level Security (RLS)**: Database-level access control
+- **Rate Limiting**: Request throttling to prevent abuse
+- **CORS**: Configurable cross-origin resource sharing
+- **Input Validation**: Zod schema validation for all requests
+- **Self-Service Account Deletion**: Database function allows users to delete their own accounts without requiring service role key
+
+## Deployment Architecture
+
+```mermaid
+graph TB
+    Internet[Internet] --> LB[Load Balancer]
+    LB --> App1[App Instance 1]
+    LB --> App2[App Instance 2]
+    LB --> App3[App Instance N]
+    
+    App1 --> Supabase[(Supabase<br/>PostgreSQL)]
+    App2 --> Supabase
+    App3 --> Supabase
+    
+    Supabase --> AuthService[Supabase Auth]
+    Supabase --> Storage[Supabase Storage]
+    
+    App1 --> Logger[Logging Service]
+    App2 --> Logger
+    App3 --> Logger
+    
+    style LB fill:#4a90e2
+    style Supabase fill:#3fcf8e
+    style Logger fill:#48dbfb
+```
+
+### Docker Configuration
+
+The project includes multi-stage Dockerfiles for:
+- **Development**: Hot reload with all dependencies
+- **Production**: Optimized image with only production dependencies
+- **Build Cache**: Cached build stages for faster CI/CD
 
 ---
 
-## Scalability and Performance
+## Module Details
 
-### 1. Horizontal Scaling Strategy
+### Authentication Module
+- Handles user registration, login, logout
+- Token management (access & refresh tokens)
+- Password reset and change
+- Account deletion (via database function, no service role key required)
 
-```yaml
-# Kubernetes Deployment
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: api-gateway
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: api-gateway
-  template:
-    metadata:
-      labels:
-        app: api-gateway
-    spec:
-      containers:
-      - name: api-gateway
-        image: fitnesshub/api-gateway:latest
-        ports:
-        - containerPort: 3000
-        env:
-        - name: NODE_ENV
-          value: "production"
-        - name: REDIS_URL
-          valueFrom:
-            secretKeyRef:
-              name: redis-secret
-              key: url
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 5
-          periodSeconds: 5
-```
+### Users Module
+- Profile management (CRUD operations)
+- User search and discovery
+- User statistics and analytics
 
-### 2. Caching Strategy
+### Workouts Module
+- Create, read, update, delete workouts
+- Workout history and filtering
+- Workout templates
 
-```typescript
-// Redis Caching Service
-class CacheService {
-  constructor(private redis: Redis) {}
-  
-  async get<T>(key: string): Promise<T | null> {
-    try {
-      const value = await this.redis.get(key)
-      return value ? JSON.parse(value) : null
-    } catch (error) {
-      console.error('Cache get error:', error)
-      return null
-    }
-  }
-  
-  async set(key: string, value: any, ttl: number = 3600): Promise<void> {
-    try {
-      await this.redis.setex(key, ttl, JSON.stringify(value))
-    } catch (error) {
-      console.error('Cache set error:', error)
-    }
-  }
-  
-  async del(key: string): Promise<void> {
-    try {
-      await this.redis.del(key)
-    } catch (error) {
-      console.error('Cache delete error:', error)
-    }
-  }
-  
-  async invalidatePattern(pattern: string): Promise<void> {
-    try {
-      const keys = await this.redis.keys(pattern)
-      if (keys.length > 0) {
-        await this.redis.del(...keys)
-      }
-    } catch (error) {
-      console.error('Cache pattern invalidation error:', error)
-    }
-  }
-}
-```
+### Exercises Module
+- Exercise library management
+- Custom exercise creation
+- Exercise categorization and filtering
+- Reference data (categories, muscle groups, equipment)
 
-### 3. Database Connection Pooling
+### Social Module
+- Post creation and management
+- Like/unlike functionality
+- Social feed and activity
 
-```typescript
-// Database Connection Pool
-class DatabasePool {
-  private pool: Pool
-  
-  constructor() {
-    this.pool = new Pool({
-      host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT || '5432'),
-      database: process.env.DB_NAME,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      max: 20, // Maximum number of clients in the pool
-      idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-      connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-    })
-  }
-  
-  async query(text: string, params?: any[]): Promise<QueryResult> {
-    const client = await this.pool.connect()
-    try {
-      return await client.query(text, params)
-    } finally {
-      client.release()
-    }
-  }
-  
-  async transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
-    const client = await this.pool.connect()
-    try {
-      await client.query('BEGIN')
-      const result = await callback(client)
-      await client.query('COMMIT')
-      return result
-    } catch (error) {
-      await client.query('ROLLBACK')
-      throw error
-    } finally {
-      client.release()
-    }
-  }
-}
-```
+### Dashboard Module
+- Overview statistics
+- Time-based analytics
+- Recent activity feed
+
+### Personal Module
+- Personal information management
+- Fitness profile (metrics, goals, preferences)
+
+### Settings Module
+- General settings
+- Notification preferences
+- Privacy settings
 
 ---
 
-## Monitoring and Observability
+## Key Architectural Decisions
 
-### 1. Health Check Endpoints
+### 1. Type-Safe Database Operations
+- Custom helper functions (`database-helpers.ts`) for type-safe Supabase operations
+- Avoids unsafe `as any` or `as never` casts
+- Uses TypeScript generics with `TableInsert`, `TableUpdate`, and `TableRow` types
 
-```typescript
-// Comprehensive Health Check
-app.get('/health', async (c) => {
-  const health = {
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    version: process.env.APP_VERSION || '1.0.0',
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
-    services: {}
-  }
-  
-  // Check each service
-  for (const [name, service] of Object.entries(services)) {
-    try {
-      const response = await fetch(`${service.url}${service.healthCheck}`, {
-        signal: AbortSignal.timeout(5000)
-      })
-      
-      health.services[name] = {
-        status: response.ok ? 'healthy' : 'unhealthy',
-        responseTime: Date.now() - startTime,
-        lastCheck: new Date().toISOString()
-      }
-    } catch (error) {
-      health.services[name] = {
-        status: 'unhealthy',
-        error: error.message,
-        lastCheck: new Date().toISOString()
-      }
-    }
-  }
-  
-  const allHealthy = Object.values(health.services).every(s => s.status === 'healthy')
-  return c.json(health, allHealthy ? 200 : 503)
-})
-```
+### 2. Self-Service Account Deletion
+- Database function `delete_own_account()` with `SECURITY DEFINER`
+- Users can delete their own accounts without requiring service role key
+- Automatic cascade deletion of related data
 
-### 2. Metrics Collection
+### 3. Centralized Route Management
+- All routes defined as constants in `src/core/routes.ts`
+- Single source of truth for API versioning and route paths
+- Type-safe route constants
 
-```typescript
-// Prometheus Metrics
-import { register, collectDefaultMetrics, Counter, Histogram } from 'prom-client'
+### 4. Modular Architecture
+- Each domain feature is a self-contained module
+- Consistent structure across all modules
+- Easy to add new features or modify existing ones
 
-// Collect default metrics
-collectDefaultMetrics()
-
-// Custom metrics
-const httpRequestsTotal = new Counter({
-  name: 'http_requests_total',
-  help: 'Total number of HTTP requests',
-  labelNames: ['method', 'route', 'status_code']
-})
-
-const httpRequestDuration = new Histogram({
-  name: 'http_request_duration_seconds',
-  help: 'Duration of HTTP requests in seconds',
-  labelNames: ['method', 'route', 'status_code'],
-  buckets: [0.1, 0.5, 1, 2, 5]
-})
-
-// Metrics endpoint
-app.get('/metrics', async (c) => {
-  const metrics = await register.metrics()
-  return c.text(metrics)
-})
-```
-
-### 3. Structured Logging
-
-```typescript
-// Winston Logger Configuration
-import winston from 'winston'
-
-const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    winston.format.json()
-  ),
-  defaultMeta: { service: 'api-gateway' },
-  transports: [
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'logs/combined.log' }),
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      )
-    })
-  ]
-})
-
-// Request logging middleware
-app.use('*', async (c, next) => {
-  const start = Date.now()
-  const { method, url } = c.req
-  
-  await next()
-  
-  const duration = Date.now() - start
-  const { status } = c.res
-  
-  logger.info('HTTP Request', {
-    method,
-    url,
-    status,
-    duration,
-    userAgent: c.req.header('User-Agent'),
-    ip: c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
-  })
-})
-```
+### 5. Middleware Chain
+- Request flows through: CORS → Rate Limiting → Auth → Validation → Handler
+- Error handling middleware catches all errors
+- Logging middleware tracks all requests
 
 ---
 
-## Deployment and DevOps
-
-### 1. Docker Configuration
-
-```dockerfile
-# Multi-stage Dockerfile for API Gateway
-FROM node:18-alpine AS builder
-
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-
-FROM node:18-alpine AS runtime
-
-WORKDIR /app
-COPY --from=builder /app/node_modules ./node_modules
-COPY . .
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
-USER nodejs
-
-EXPOSE 3000
-CMD ["node", "dist/index.js"]
-```
-
-### 2. Kubernetes Manifests
-
-```yaml
-# Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: api-gateway-service
-spec:
-  selector:
-    app: api-gateway
-  ports:
-  - protocol: TCP
-    port: 80
-    targetPort: 3000
-  type: LoadBalancer
-
----
-# Ingress
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: api-gateway-ingress
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-spec:
-  tls:
-  - hosts:
-    - api.fitnesshub.com
-    secretName: api-gateway-tls
-  rules:
-  - host: api.fitnesshub.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: api-gateway-service
-            port:
-              number: 80
-```
-
-### 3. CI/CD Pipeline
-
-```yaml
-# GitHub Actions Workflow
-name: Deploy API Gateway
-
-on:
-  push:
-    branches: [main]
-    paths: ['apps/api-gateway/**']
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-        cache: 'npm'
-    
-    - name: Install dependencies
-      run: npm ci
-    
-    - name: Run tests
-      run: npm test
-    
-    - name: Run linting
-      run: npm run lint
-    
-    - name: Run type checking
-      run: npm run type-check
-
-  build:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Build Docker image
-      run: |
-        docker build -t fitnesshub/api-gateway:${{ github.sha }} .
-        docker tag fitnesshub/api-gateway:${{ github.sha }} fitnesshub/api-gateway:latest
-    
-    - name: Push to registry
-      run: |
-        echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-        docker push fitnesshub/api-gateway:${{ github.sha }}
-        docker push fitnesshub/api-gateway:latest
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-    - name: Deploy to Kubernetes
-      run: |
-        echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig
-        export KUBECONFIG=kubeconfig
-        kubectl set image deployment/api-gateway api-gateway=fitnesshub/api-gateway:${{ github.sha }}
-        kubectl rollout status deployment/api-gateway
-```
-
----
-
-This backend architecture documentation provides a comprehensive foundation for building a scalable, maintainable, and performant microservices-based backend system for the FitnessHub project.
-
+**Documentation Version**: 2.0.0  
+**Last Updated**: October 2025  
+**Maintained by**: GymPal Development Team

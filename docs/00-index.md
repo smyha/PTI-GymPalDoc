@@ -18,10 +18,31 @@ This document serves as the main index for navigating through all the technical 
 ### [02. Technology Stack](./architecture/02-tech-stack.md)
 - Final technology decisions
 - Frontend: Next.js 14 + TypeScript + Tailwind CSS + Zustand
-- Backend: Hono + TypeScript + Supabase
+- Backend: Hono + TypeScript + Supabase + Zod + Pino
 - Infrastructure: Docker + Kubernetes + ArgoCD
 - Technology comparisons and justifications
-- **NEW**: Real project structure Backend and Frontend
+- **UPDATED**: Current project structure reflecting modular architecture
+
+### [Backend Architecture](./architecture/backend.md)
+- Complete backend architecture documentation
+- Module-based structure with Hono framework
+- Authentication flow and security
+- Database schema and relationships
+- API endpoints and request flow
+- **NEW**: Self-service account deletion (no service role key required)
+
+### [04. Project Structure](./architecture/04-project-structure.md)
+- Complete directory structure
+- Module pattern explanation
+- Core infrastructure organization
+- Middleware and plugin system
+- **UPDATED**: Current structure with modules/, core/, middleware/, plugins/
+
+### [Modules Documentation](./modules.md)
+- Detailed module documentation
+- Endpoints and handlers for each module
+- Data flows and relationships
+- **NEW**: Complete module reference
 
 ### [03. Software Architecture](./architecture/03-software-architecture.md)
 - System capabilities map

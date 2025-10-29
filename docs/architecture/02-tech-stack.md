@@ -61,75 +61,69 @@
 
 ## Arquitectura Backend Simplificada
 
-### Estructura del Proyecto Backend
+### Estructura del Proyecto Backend (Actualizada)
 
 ```
-backend/
-├── config/           # Configuración de variables de entorno
-│   └── env.ts        # Validación de variables con Zod
-├── doc/             # Esquemas de documentación API
-│   └── schemas.ts    # Esquemas Zod para validación
-├── lib/             # Librerías compartidas
-│   ├── db.ts        # Cliente Supabase con helpers
-│   ├── auth.ts      # Utilidades de autenticación JWT
-│   ├── mailer.ts    # Servicio de email con Nodemailer
-│   └── types.ts     # Tipos de base de datos
+PTI-GymPalBack/
 ├── src/
-│   ├── routes/      # 🎯 Controladores profesionales (Handlers)
-│   │   ├── auth.handler.ts          # Autenticación con OpenAPI docs
-│   │   ├── user.handler.ts          # Gestión de usuarios con validación
-│   │   ├── workout.handler.ts       # Entrenamientos y ejercicios
-│   │   ├── social.handler.ts        # Funcionalidades sociales
-│   │   ├── personal.handler.ts      # Información personal del usuario
-│   │   ├── routines.handler.ts      # Rutinas personalizadas
-│   │   ├── posts.handler.ts         # Posts sociales avanzados
-│   │   ├── dashboard.handler.ts     # Analytics y estadísticas
-│   │   └── settings.handler.ts      # Configuración de usuario
-│   ├── modules/     # 📦 Módulos de funcionalidad (Servicios)
-│   │   ├── auth/    # Módulo de autenticación completo
-│   │   │   ├── auth.service.ts    # Lógica de negocio
-│   │   │   ├── auth.types.ts      # Tipos específicos
-│   │   │   └── auth.middleware.ts # Middleware específico
-│   │   ├── users/   # Módulo de usuarios completo
-│   │   │   ├── user.service.ts    # Lógica de usuarios
-│   │   │   ├── user.types.ts      # Tipos de usuarios
-│   │   │   └── user.middleware.ts # Validación de usuarios
-│   │   ├── workouts/ # Módulo de entrenamientos completo
-│   │   │   ├── workout.service.ts    # Lógica de workouts
-│   │   │   ├── workout.types.ts      # Tipos de workouts
-│   │   │   └── workout.middleware.ts # Validación de workouts
-│   │   ├── social/   # Módulo social completo
-│   │   │   ├── social.service.ts    # Lógica social
-│   │   │   ├── social.types.ts      # Tipos sociales
-│   │   │   └── social.middleware.ts # Validación social
-│   │   └── ai/       # Módulo de IA (pendiente)
-│   ├── shared/      # 🔧 Utilidades compartidas
-│   │   ├── middleware/ # Middlewares globales
-│   │   │   ├── error.middleware.ts
-│   │   │   ├── rate-limit.middleware.ts
-│   │   │   └── validation.middleware.ts
-│   │   └── utils/   # Utilidades comunes
-│   │       ├── helpers.ts
-│   │       ├── constants.ts
-│   │       └── response.ts
-│   └── index.ts     # 🚀 Punto de entrada optimizado
-├── supabase/        # Configuración de Supabase
-│   ├── migrations/  # Migraciones de base de datos
-│   ├── config.toml  # Configuración de Supabase
-│   └── seed.sql     # Datos de prueba
-├── tests/           # Tests del proyecto
-├── docs/            # Documentación del proyecto
-│   ├── README.md              # Documentación de la API
-│   └── OPENAPI_DOCUMENTATION.md # Resumen de documentación OpenAPI
-├── scripts/         # Scripts de utilidad
-│   ├── generate-openapi.js          # Generación OpenAPI básica
-│   └── generate-complete-openapi-v2.js # Generación OpenAPI completa
-├── package.json
-├── tsconfig.json
-├── vitest.config.ts
-├── openapi.json     # Especificación OpenAPI 3.1 
-├── env.example      # Variables de entorno de ejemplo
-└── Dockerfile
+│   ├── app.ts                    # Main Hono application setup
+│   ├── server.ts                 # Server entry point
+│   │
+│   ├── core/                     # Core application infrastructure
+│   │   ├── config/               # Configuration files
+│   │   │   ├── database.ts       # Supabase client configuration
+│   │   │   ├── database-helpers.ts # Type-safe DB operation helpers
+│   │   │   ├── env.ts            # Environment variables with Zod
+│   │   │   └── logger.ts         # Pino logger configuration
+│   │   ├── constants/            # Application constants
+│   │   │   └── api.ts            # HTTP status codes, error codes
+│   │   ├── routes.ts             # Centralized route constants
+│   │   ├── types/                # Type definitions
+│   │   │   └── database.types.ts # Supabase generated types
+│   │   └── utils/                # Utility functions
+│   │       ├── response.ts       # Response helpers
+│   │       ├── errors.ts         # Custom error classes
+│   │       └── auth.ts           # Auth utilities
+│   │
+│   ├── middleware/               # HTTP middleware
+│   │   ├── auth.ts              # Authentication middleware
+│   │   ├── error.ts             # Global error handler
+│   │   ├── logging.ts           # Request logging with Pino
+│   │   ├── validation.ts        # Zod validation middleware
+│   │   └── rate-limit.ts         # Rate limiting middleware
+│   │
+│   ├── modules/                  # Business domain modules
+│   │   ├── auth/                # Authentication module
+│   │   │   ├── routes.ts         # Route definitions with @openapi
+│   │   │   ├── handlers.ts       # HTTP request handlers
+│   │   │   ├── service.ts        # Business logic
+│   │   │   ├── schemas.ts       # Zod validation schemas
+│   │   │   └── types.ts         # TypeScript type definitions
+│   │   ├── users/               # User management module
+│   │   ├── workouts/            # Workout management module
+│   │   ├── exercises/           # Exercise library module
+│   │   ├── social/              # Social features module
+│   │   ├── dashboard/           # Dashboard analytics module
+│   │   ├── personal/            # Personal data module
+│   │   └── settings/            # User settings module
+│   │
+│   └── plugins/                  # Hono plugins
+│       ├── health.ts            # Health check plugin
+│       └── openapi.ts           # OpenAPI documentation plugin
+│
+├── supabase/                     # Database configuration
+│   └── migrations/               # Database migrations
+│       ├── 001_schema.sql        # Database schema
+│       ├── 002_rls_policies.sql  # Row Level Security
+│       ├── 003_seed_data.sql    # Seed data (optional)
+│       └── 004_triggers.sql     # Triggers and database functions
+│
+├── dist/                         # Compiled TypeScript output
+├── Dockerfile                    # Production Docker image
+├── docker-compose.yml            # Development environment
+├── package.json                  # Dependencies
+├── tsconfig.json                 # TypeScript configuration
+└── openapi.json                  # OpenAPI specification
 ```
 
 ### Configuración Base
@@ -141,14 +135,17 @@ backend/
 - **OpenAPI 3.1**: Documentación automática con Scalar
 - **Validación**: Zod para validación robusta de datos
 
-### Mejoras Implementadas Recientemente
+### Arquitectura Actual Implementada
 
-**🏗️ Arquitectura Profesional:**
-- **Separación clara**: Controladores (routes) vs Servicios (modules)
-- **Handlers profesionales**: Documentación OpenAPI integrada
-- **Servicios modulares**: Lógica de negocio encapsulada
-- **Middleware especializado**: Validación por módulo
-- **Tipos TypeScript**: Completos y consistentes
+**🏗️ Arquitectura Modular Moderna:**
+- **Estructura modular**: Cada módulo contiene routes, handlers, service, schemas, types
+- **Core infrastructure**: Configuración centralizada (database, env, logger)
+- **Middleware global**: Auth, error handling, logging, validation, rate limiting
+- **Plugins**: Health check y OpenAPI documentation integrados
+- **Type-safe operations**: Database helpers con TypeScript generics
+- **Self-service features**: Account deletion sin service role key (vía database function)
+- **OpenAPI integrado**: Documentación automática con @openapi comments
+- **Logging estructurado**: Pino para logging JSON estructurado
 
 **📊 Funcionalidades Avanzadas:**
 - **Información personal detallada** (edad, peso, altura, BMI, grasa corporal)
