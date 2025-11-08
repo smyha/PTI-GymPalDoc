@@ -1,5 +1,20 @@
 # GymPal: Fitness Platform with Social, AI and Orchestration
 
+## Recent changes (summary)
+
+- 2025-11-08: Implemented optional HTTPS/TLS support in the backend. The server
+  can be started with TLS by setting TLS_ENABLED=true and pointing
+  TLS_CERT_FILE/TLS_KEY_FILE to valid PEM files (recommended for local dev:
+  use mkcert to generate trusted dev certs). CORS was adjusted to echo the
+  allowed origin for credentialed requests and an explicit OPTIONS handler was
+  added to improve preflight behaviour.
+
+- 2025-11-08: Playwright configuration is now kept inside the frontend
+  repository at `PTI-GymPalFront/Gympalfrontend/playwright.config.ts`. This is
+  the authoritative config for E2E tests; CI can orchestrate starting backend
+  + frontend and then run Playwright from the frontend folder.
+
+
 ## 📋 Table of Contents
 - [GymPal: Fitness Platform with Social, AI and Orchestration](#gympal-fitness-platform-with-social-ai-and-orchestration)
   - [📋 Table of Contents](#-table-of-contents)
