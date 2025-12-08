@@ -31,23 +31,8 @@
       - [Backend Project Structure](#backend-project-structure)
       - [OpenAPI Documentation Status](#openapi-documentation-status)
       - [Database Migrations](#database-migrations)
-    - [**1. User Personal Information**](#1-user-personal-information)
-      - [**GET /api/v1/personal**](#get-apiv1personal)
-      - [**PUT /api/v1/personal**](#put-apiv1personal)
-      - [**GET /api/v1/personal/fitness-profile**](#get-apiv1personalfitness-profile)
-      - [**PUT /api/v1/personal/fitness-profile**](#put-apiv1personalfitness-profile)
-    - [**2. Custom Routines**](#2-custom-routines)
-      - [**GET /api/v1/workouts/routines**](#get-apiv1workoutsroutines)
-      - [**POST /api/v1/workouts/routines**](#post-apiv1workoutsroutines)
-      - [**GET /api/v1/workouts/routines/search**](#get-apiv1workoutsroutinessearch)
-      - [**POST /api/v1/workouts/routines/:routineId/share**](#post-apiv1workoutsroutinesroutineidshare)
-    - [**3. Advanced Social Posts**](#3-advanced-social-posts)
-      - [**GET /api/v1/social/posts**](#get-apiv1socialposts)
-      - [**POST /api/v1/social/posts**](#post-apiv1socialposts)
-      - [**POST /api/v1/social/posts/:postId/share**](#post-apiv1socialpostspostidshare)
-      - [**POST /api/v1/social/posts/:postId/repost**](#post-apiv1socialpostspostidrepost)
-      - [**GET /api/v1/social/posts/trending**](#get-apiv1socialpoststrending)
-      - [**GET /api/v1/social/posts/search**](#get-apiv1socialpostssearch)
+    - [**API Endpoints Summary**](#api-endpoints-summary)
+      - [Complete API Documentation](#complete-api-documentation)
       - [Environment Variables](#environment-variables)
     - [Infrastructure and DevOps](#infrastructure-and-devops)
     - [Integrations](#integrations)
@@ -550,67 +535,75 @@ graph TB
 - `POST /posts/:id/like` - Like post (toggle operation)
 - `POST /posts/:id/unlike` - Unlike post
 
-**🔐 Authentication (8 endpoints):**
+### API Endpoints Summary
+
+**Total: 69 endpoints** organized across 10 categories.
+
+| Category | Count | Description |
+|----------|-------|-------------|
+| 🔐 **Authentication** | 8 | Register, login, logout, refresh, profile, password management, account deletion |
+| 👤 **Users** | 6 | Profile management, search, statistics, achievements |
+| 💪 **Workouts** | 12 | Workout CRUD, exercises management, sessions, statistics |
+| 🏋️ **Exercises** | 5 | Exercise catalog, categories, muscle groups, equipment |
+| 📱 **Social** | 11 | Posts, likes, comments, reposts, follows, user interactions |
+| 👤 **Personal** | 3 | Personal info, fitness profile management |
+| 📊 **Dashboard** | 7 | Statistics, analytics, recent activity, leaderboard, calendar |
+| 📅 **Calendar** | 3 | Calendar management, scheduled workouts |
+| ⚙️ **Settings** | 9 | User preferences, notifications, privacy, account settings |
+| 🤖 **AI** | 5 | Chat with agents, conversation management, history |
+
+**Key Endpoints:**
+
+**🔐 Authentication:**
 - `POST /api/v1/auth/register` - User registration
-- `POST /api/v1/auth/login` - Login
+- `POST /api/v1/auth/login` - Login with JWT tokens
 - `GET /api/v1/auth/me` - Current user profile
 - `POST /api/v1/auth/logout` - Logout
 - `POST /api/v1/auth/refresh` - Token refresh
 - `POST /api/v1/auth/reset-password` - Reset password
-- `PUT /api/v1/auth/change-password/:id` - Change password
-- `DELETE /api/v1/auth/delete-account/:id` - Delete account (self-service, no service role key required)
+- `PUT /api/v1/auth/change-password/{id}` - Change password
+- `DELETE /api/v1/auth/delete-account/{id}` - Delete account
 
-**👤 User Management (5 endpoints):**
-- `GET /api/v1/users/profile` - Get authenticated user profile
-- `PUT /api/v1/users/profile` - Update authenticated user profile
-- `GET /api/v1/users/:id` - Get public user profile by ID
-- `GET /api/v1/users/search` - Search users by username or name
-- `GET /api/v1/users/stats` - Get authenticated user statistics
-
-**💪 Workouts (5 endpoints):**
+**💪 Workouts:**
 - `GET /api/v1/workouts` - List workouts with pagination and filters
 - `POST /api/v1/workouts` - Create workout
-- `GET /api/v1/workouts/:id` - Get workout details
-- `PUT /api/v1/workouts/:id` - Update workout (owner only)
-- `DELETE /api/v1/workouts/:id` - Delete workout (owner only)
+- `GET /api/v1/workouts/{id}` - Get workout details
+- `PUT /api/v1/workouts/{id}` - Update workout
+- `DELETE /api/v1/workouts/{id}` - Delete workout
+- `GET /api/v1/workouts/{id}/exercises` - Get exercises in workout
+- `POST /api/v1/workouts/{id}/exercises` - Add exercise to workout
+- `PUT /api/v1/workouts/{id}/exercises/{exerciseId}` - Update exercise in workout
+- `DELETE /api/v1/workouts/{id}/exercises/{exerciseId}` - Remove exercise
+- `POST /api/v1/workouts/{id}/start` - Start workout session
+- `POST /api/v1/workouts/{id}/complete` - Complete workout session
+- `GET /api/v1/workouts/sessions` - List workout sessions
+- `GET /api/v1/workouts/users/{userId}/count` - Get workout statistics
 
-**📱 Social Features (7 endpoints):**
-- `GET /api/v1/social/posts` - List posts with pagination and filters
+**📱 Social:**
+- `GET /api/v1/social/posts` - List posts with filters
 - `POST /api/v1/social/posts` - Create new post
-- `GET /api/v1/social/posts/:id` - Get post details
-- `PUT /api/v1/social/posts/:id` - Update post (author only)
-- `DELETE /api/v1/social/posts/:id` - Delete post (author only)
-- `POST /api/v1/social/posts/:id/like` - Like post (toggle)
-- `POST /api/v1/social/posts/:id/unlike` - Unlike post
+- `GET /api/v1/social/posts/{id}` - Get post details
+- `POST /api/v1/social/posts/{id}/like` - Like/unlike post
+- `POST /api/v1/social/posts/{id}/repost` - Repost
+- `GET /api/v1/social/posts/{id}/comments` - Get comments
+- `POST /api/v1/social/posts/{id}/comments` - Add comment
+- `POST /api/v1/social/users/{userId}/follow` - Follow user
+- `POST /api/v1/social/users/{userId}/unfollow` - Unfollow user
+- `GET /api/v1/social/users/{userId}/followers` - Get followers
+- `GET /api/v1/social/users/{userId}/following` - Get following
 
-**👤 Personal Information (4 endpoints):**
-- `GET /api/v1/personal` - Get personal information
-- `PUT /api/v1/personal` - Update personal information
-- `GET /api/v1/personal/fitness-profile` - Get fitness profile
-- `PUT /api/v1/personal/fitness-profile` - Update fitness profile
+**🤖 AI:**
+- `POST /api/v1/ai/chat/agent` - Chat with AI agent (sequential: reception → data → routine)
+- `GET /api/v1/ai/chat/history` - Get chat history
+- `GET /api/v1/ai/chat/conversations` - List conversations
+- `POST /api/v1/ai/chat/conversations` - Create conversation
+- `DELETE /api/v1/ai/chat/conversations/{id}` - Delete conversation
 
-**🏋️ Exercises (8 endpoints):**
-- `GET /api/v1/exercises/categories` - Get exercise categories
-- `GET /api/v1/exercises/muscle-groups` - Get muscle groups
-- `GET /api/v1/exercises/equipment` - Get equipment types
-- `GET /api/v1/exercises` - List exercises with filters
-- `POST /api/v1/exercises` - Create new exercise
-- `GET /api/v1/exercises/:id` - Get exercise details
-- `PUT /api/v1/exercises/:id` - Update exercise (creator only)
-- `DELETE /api/v1/exercises/:id` - Delete exercise (creator only)
+**Complete API Documentation:**
 
-**📊 Dashboard (3 endpoints):**
-- `GET /api/v1/dashboard` - Get dashboard overview
-- `GET /api/v1/dashboard/stats` - Get statistics by period
-- `GET /api/v1/dashboard/activity` - Get recent activity
-
-**⚙️ Settings (6 endpoints):**
-- `GET /api/v1/settings` - Get all settings
-- `PUT /api/v1/settings` - Update settings
-- `GET /api/v1/settings/notifications` - Get notification preferences
-- `PUT /api/v1/settings/notifications` - Update notification preferences
-- `GET /api/v1/settings/privacy` - Get privacy settings
-- `PUT /api/v1/settings/privacy` - Update privacy settings
+For detailed endpoint documentation including request/response schemas, authentication requirements, and examples, see:
+- **[Complete API Endpoints Documentation](../docs/api/01-api-endpoints.md)**
+- **Interactive OpenAPI Documentation**: Available at `/api/reference` (Scalar API Reference)
 
 **📦 PNPM Scripts:**
 - `pnpm run dev` - Development server with hot reload
@@ -639,14 +632,52 @@ graph TB
 - **Rate limiting:** Protection against abuse
 - **Configured CORS:** For development and production
 
-#### Database Migrations
+#### Database Schema
 
-**`user_personal_info`** - Detailed personal information:
-- `age` - User age (13-120 years)
-- `weight_kg` - Weight in kilograms
-- `height_cm` - Height in centimeters
-- `bmi` - Calculated body mass index
-- `body_fat_percentage` - Body fat percentage
+The complete database schema is documented in detail. See:
+- **[Complete Database Schema Documentation](../docs/database/01-database-schema.md)**
+
+**Schema Overview:**
+
+The database consists of **19 main tables** organized into categories:
+
+**Core User Tables:**
+- `profiles` - User profiles (references Supabase Auth)
+- `user_personal_info` - Physical information (age, weight, height, BMI)
+- `user_fitness_profile` - Fitness goals and preferences
+- `user_dietary_preferences` - Dietary restrictions and preferences
+- `user_stats` - Historical statistics tracking
+- `user_settings` - User configuration and preferences
+
+**Workout & Exercise Tables:**
+- `exercises` - Exercise library
+- `workouts` - User-created workout routines
+- `workout_exercises` - Junction table (workouts ↔ exercises)
+- `workout_sessions` - Completed workout sessions
+- `exercise_set_logs` - Detailed set tracking
+- `scheduled_workouts` - Calendar scheduled workouts
+- `shared_workouts` - Shared workout routines
+
+**Social Tables:**
+- `posts` - Social media posts
+- `post_likes` - Post likes
+- `post_comments` - Post comments (with threading)
+- `post_shares` - Post sharing
+- `post_reposts` - Post reposts
+- `follows` - User following relationships
+
+**Key Features:**
+- **Row Level Security (RLS)**: Security policies at database level
+- **UUID Primary Keys**: All tables use UUID
+- **Automatic Timestamps**: `created_at` and `updated_at` tracking
+- **Foreign Keys**: Referential integrity with cascade deletes
+- **Indexes**: Optimized for common query patterns
+- **Triggers**: Automatic counter updates (likes_count, comments_count)
+
+**Database Migrations:**
+
+The schema is managed through Supabase migrations:
+- `001_schema.sql` - Complete initial schema with all tables, indexes, triggers, and functions
 
 **`user_fitness_profile`** - Complete fitness profile:
 - `experience_level` - Experience level (beginner, intermediate, advanced, expert)
